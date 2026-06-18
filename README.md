@@ -1,80 +1,57 @@
 # aiida-workgraph-wishlist
 
-Minimal, **executable** MWEs of `aiida-workgraph` behaviours — both the ones
-that already work (regression guards) and the ones we *wish* worked (tracked as
-`xfail`). Built to bring concrete, runnable pain points to the aiida-workgraph
-dev week.
+Runnable MWEs of `aiida-workgraph` behaviours we rely on, work around, or wish
+we had — distilled from the contortions in `aiida-koopmans2`. Built to bring
+concrete pain points to the dev week.
 
-Pinned versions these observations were made against:
+Observed against **aiida-workgraph 0.8.1 / node-graph 0.6.5**.
 
-| package | version |
+## How it tracks progress
+
+- **Passing test** = behaviour that works today (a guard, often documenting a
+  gotcha + its workaround in the assertion).
+- **`xfail` test** = a wish. `xfail_strict` is on, so the day it's granted the
+  test XPASSes → the suite fails loudly → promote it to a guard.
+
+```
+pytest          # green except XPASS
+pytest -rX      # list the still-open wishes
+```
+
+## The wishes (`xfail`)
+
+| Wish | Today |
 |---|---|
-| aiida-workgraph | 0.8.1 |
-| node-graph | 0.6.5 |
+| `value is <enum>` in a graph body | silently `False` (wrapt proxy identity); `==` works, `is None` works |
+| `None` as a task input arg | silently dropped → "missing arg" / default |
+| index a `Map` item inline (`z.item.value["k"]`) | raises; needs a wrapper `@task` (yet `socket * 2` is fine) |
+| bad link-label name (`_foo`, `dft_n-1`) | task **silently skipped**, workgraph "succeeds" — should fail at build |
 
-## The mechanism, in one table
+## Gotchas that already work (guards)
 
-Where a value comes from determines what you can do with it. Everything below is
-asserted by the tests (aiida-workgraph 0.8.1):
+| In a *deferred* `@task.graph` body | Outside (raw futures / nodes) |
+|---|---|
+| subscript, `==`, branching, `is None`, arithmetic — all see real values | `socket * 2` / `// 2` build operator tasks |
+| `None` inside an opaque dict survives | subscripting a raw future raises (loud, good) |
+| | `str(node)` is a repr → use `.value` |
+| | a scalar input is a proxy/node → use `.value` |
+| | a `@task` body gets the *deserialized* payload (ase.Atoms), not the node |
+| | plain Enum → `EnumData` (want `orm.Str`? pass `.value`) |
+| | emit an existing node only from a `@task.workfunction`, not a `@task` |
 
-| Context | Your variable is | `x["k"]` | `==` / branch | `is None` | `is <enum>` | `x * 2`, `x // 2` |
-|---|---|---|---|---|---|---|
-| **Deferred `@task.graph` body** (runs at runtime via `materialize_graph`) | `TaggedValue` (concrete value + provenance tag) | works | works | works | **silently False** | works |
-| **Raw future socket** (`task.outputs`, `z.item.value` in a zone body) | `TaskSocket` (a *future*) | **raises** `GraphDeferredIllegalOperationError` | — | — | — | works (builds an operator task) |
+## The one-line theme for the devs
 
-Two findings worth stressing, because they contradict common "always wrap it in
-a `@task`" folklore:
-
-1. **Inside a deferred `@task.graph` body almost everything just works** —
-   subscript, `==` (incl. against an Enum), structural `if`/branching, and even
-   `is None`. The values are real.
-2. **Arithmetic on a raw future works** — `socket * 2` builds a deferred
-   `op_mul` task. So `socket // 2` is fine.
-
-The genuine gaps (the `xfail`s) are narrow:
-
-- **`is <non-None object>` is silently wrong.** A non-None graph input is a
-  `wrapt.ObjectProxy`; Python's `is` compares the *proxy's* identity, which
-  wrapt cannot intercept, so `value is Enum.MEMBER` is silently `False` even
-  though `==` is `True`. (`is None` escapes this — None arrives unwrapped.) No
-  runtime detection is possible, hence "wish it errored or matched."
-- **Subscripting a raw future raises**, so indexing a `Map` item inline
-  (`z.item.value["k"]`) needs a wrapper `@task` — even though arithmetic on the
-  same future is allowed. That asymmetry is the ergonomic wish.
-
-## How this repo tracks progress
-
-- A test that **passes** documents behaviour that *currently works* — a
-  regression guard.
-- A test marked `@pytest.mark.xfail(strict=True, reason=...)` documents a
-  behaviour we **wish** worked. It `xfail`s today. The day aiida-workgraph
-  grants the wish, the test starts passing -> `strict=True` turns that into a
-  loud `XPASS` **failure**, prompting us to promote it to a normal test. So
-  `pytest` going green-except-for-XPASS is exactly the signal "a wish came
-  true."
-
-```
-pytest -q          # xfailed = still-open wishes; xpassed = wish granted (flip it!)
-pytest -rX         # list which wishes are still open
-```
+The `TaggedValue`/socket proxy leaks into user Python with surprising, usually
+**silent** edges (`is`, `None`, scalar-as-node). The loud
+`GraphDeferredIllegalOperationError` on eager subscript is the model to extend.
 
 ## Running
 
-Any environment with `aiida-workgraph` + a working AiiDA profile. The suite uses
-AiiDA's `aiida_profile` pytest fixture (a throwaway profile); `WorkGraph.run()`
-executes in-process, no daemon needed.
+Any env with `aiida-workgraph`; the suite uses AiiDA's `aiida_profile` fixture
+and runs each graph in-process (no daemon). Layout:
 
-```
-pip install -e .          # or: use an env that already has aiida-workgraph
-pytest
-```
-
-## Layout
-
-- `tests/test_graph_body_values.py` — what a *deferred* `@task.graph` body sees
-  (subscript / `==` / branch work; `is` does not).
-- `tests/test_zone_ergonomics.py` — *eager* zone-body ergonomics we wish we had
-  (inline subscript / arithmetic on a socket without a wrapper `@task`).
-
-Each test's docstring states: **what** it does, the **ideal**, and the
-**current** behaviour.
+- `test_graph_body_values.py` — what a deferred `@task.graph` body sees
+- `test_zone_ergonomics.py` — raw future sockets (arithmetic vs subscript)
+- `test_none_handling.py` — where `None` survives or vanishes
+- `test_node_and_serialization.py` — node↔value boundary surprises
+- `test_link_labels.py` — silent link-label rejection
