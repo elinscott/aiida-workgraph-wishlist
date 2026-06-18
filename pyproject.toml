@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aiida-workgraph-wishlist"
+version = "0.0.0"
+description = "Executable MWEs of aiida-workgraph behaviours we have and wish we had."
+requires-python = ">=3.10"
+dependencies = [
+    "aiida-workgraph",
+    "aiida-core",
+    "pytest",
+]
+
+[tool.setuptools]
+# No package to install; this repo is just an executable test suite.
+py-modules = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Surface xfail/xpass prominently: -rX lists still-open wishes, xpass (a granted
+# wish) is a failure under strict markers.
+addopts = "-ra"
+xfail_strict = true
