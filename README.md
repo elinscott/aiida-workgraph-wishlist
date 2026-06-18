@@ -24,6 +24,8 @@ pytest -rX      # list the still-open wishes
 |---|---|
 | `value is <enum>` in a graph body | silently `False` (wrapt proxy identity); `==` works, `is None` works |
 | `None` as a task input arg | silently dropped → "missing arg" / default |
+| use a `Map` item without `.value` (`z.item`) | raises; `z.item` is an outputs namespace, must type `z.item.value` |
+| destructure a `Map` item's fields | can't inline → forces an unpack `@task` (one named output per field) |
 | index a `Map` item inline (`z.item.value["k"]`) | raises; needs a wrapper `@task` (yet `socket * 2` is fine) |
 | bad link-label name (`_foo`, `dft_n-1`) | task **silently skipped**, workgraph "succeeds" — should fail at build |
 

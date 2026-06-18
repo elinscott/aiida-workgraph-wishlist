@@ -74,28 +74,57 @@ def test_eager_subscript_of_future_raises_loudly():
 
 
 # ----------------------------------------------------------------------
-# WISH: index a Map item inline without a wrapper @task
+# WISH: the Map item should be ergonomic -- no `.value`, no unpack @task
 # ----------------------------------------------------------------------
 
 
 @pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: subscripting a TaskSocket in a zone body raises "
-    "GraphDeferredIllegalOperationError, so indexing a Map item requires a wrapper "
-    "@task (or a nested @task.graph where the value is concrete). We wish "
-    "`z.item.value['n']` worked inline -- especially given `socket * 2` already "
-    "does."
+    reason="aiida-workgraph 0.8.1: `Map.item` is the map_item task's OUTPUTS "
+    "namespace (a `key` port and a `value` port), so user code must write "
+    "`z.item.value` to get the item (and `z.item.key` for its key). Passing "
+    "`z.item` directly raises 'link a top-level output socket without a parent'. "
+    "We wish the item were usable directly -- `.value` is internal machinery a "
+    "user should never have to type."
 )
-def test_inline_subscript_of_map_item_should_work(collect):
-    """WISH: index a Map item inline in the zone body."""
+def test_map_item_usable_without_dot_value(collect):
+    """WISH: ``z.item`` is the item, no ``.value`` ceremony."""
 
     @task
-    def sink(n) -> dict:
-        return {"_tag": "inline_subscript", "n": n}
+    def sink(item) -> dict:
+        return {"_tag": "item_direct", "n": item["n"]}
 
     @task.graph
     def top():
         with Map(make_items()) as z:
-            sink(n=z.item.value["n"])
+            sink(item=z.item)  # wish: z.item IS the item, not its outputs namespace
 
-    rs = collect(top, "inline_subscript")
+    rs = collect(top, "item_direct")
     assert sorted(r["n"] for r in rs) == [7, 99]
+
+
+@pytest.mark.xfail(
+    reason="aiida-workgraph 0.8.1: a Map item is a future, so you cannot subscript "
+    "it inline (`z.item.value['a']` raises). Destructuring an N-field item therefore "
+    "forces a dedicated unpack @task with one named output per field (see "
+    "aiida-koopmans2 `unpack_empty_item` / `unpack_block_item`) -- a per-iteration "
+    "process node and boilerplate that should not be necessary. We wish item fields "
+    "could feed a task directly."
+)
+def test_destructure_map_item_without_unpack_task(collect):
+    """WISH: feed a Map item's fields into a task without a wrapper unpack @task."""
+
+    @task
+    def two_field_items() -> Annotated[dict, dynamic(dict)]:
+        return {"k1": {"a": 1, "b": 2}, "k2": {"a": 10, "b": 20}}
+
+    @task
+    def sink(a, b) -> dict:
+        return {"_tag": "destructure", "total": a + b}
+
+    @task.graph
+    def top():
+        with Map(two_field_items()) as z:
+            sink(a=z.item.value["a"], b=z.item.value["b"])
+
+    rs = collect(top, "destructure")
+    assert sorted(r["total"] for r in rs) == [3, 30]
