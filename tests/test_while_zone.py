@@ -26,6 +26,17 @@ iteration, no ``wg.ctx``, no manual wait edge.
 (The "natural" formulation -- ``with While(x < 3): x = inc(x=x)`` -- is NOT run
 here: without ``ctx`` the condition never updates and the loop ignores
 ``max_iterations`` and hangs, which is itself a wart.)
+
+The docs steer to **recursion** instead (``test_..._via_recursion`` below). That
+is provenance-correct -- each iteration is a process whose loop variable is a
+real immutable input node, so the condition reads a resolved value and the value
+flows iteration-to-iteration as data links, native to a dataflow DAG. But it is
+not free: it is harder to conceptualise (most people think in loops), it has a
+``max_depth`` ceiling (default 100), and each layer is a nested process. The wish
+is therefore NOT "use recursion" -- it is that the ``While`` zone (a shipped,
+public construct the docs barely use) be **lowered to that recursive dataflow
+form internally**, so users write the intuitive loop and still get correct
+provenance: no ``ctx``, no ``<<``, no unrolled first iteration, do-while support.
 """
 
 from __future__ import annotations
@@ -57,6 +68,31 @@ def test_do_while_today_needs_unroll_ctx_and_wait_edges(collect):
             nxt = inc(x=wg.ctx.x)
             wg.ctx.x = nxt.result  # tax: re-store state every pass
         record(x=wg.ctx.x)
+
+    [r] = collect(top, "while")
+    assert r["final"] == 3
+
+
+def test_same_loop_via_recursion_is_clean_but_has_costs(collect):
+    """The documented alternative: a recursive ``@task.graph``.
+
+    No unrolled first iteration, no ``wg.ctx``, no ``<<`` wait edge -- the loop
+    variable is just a normal input, so the condition reads a resolved value and
+    the iteration-to-iteration value is recorded as data links (provenance-clean,
+    native to a dataflow DAG). Costs: harder to think in, a ``max_depth`` ceiling
+    (default 100), and a nested process per layer.
+    """
+
+    @task.graph
+    def Loop(x, target):
+        if x >= target:  # condition on an INPUT -> concrete value in the body
+            return x
+        return Loop(x=inc(x=x).result, target=target)
+
+    @task.graph
+    def top():
+        final = Loop(x=0, target=3)
+        record(x=final.result)
 
     [r] = collect(top, "while")
     assert r["final"] == 3

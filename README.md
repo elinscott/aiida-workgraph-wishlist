@@ -32,18 +32,28 @@ pytest -rX      # list the still-open wishes
 ## The heaviest tax: `While` (works, but brutal)
 
 A "run the body, loop until its output converges" algorithm (kcp.x alpha
-refinement) — see `test_while_zone.py` — has to be written with:
+refinement) — see `test_while_zone.py` — forces: (1) the **first iteration
+duplicated** before the loop (no do-while), (2) loop state **hand-plumbed through
+`wg.ctx`** (namespaces split per-socket), (3) a **manual `<<` wait edge** (`ctx`
+writes aren't dataflow edges), (4) a **special-case** for a single iteration.
 
-1. the **first iteration fully duplicated** before the loop (no do-while: the
-   condition is checked *before* the body, so it needs a pre-seeded value);
-2. loop state **hand-plumbed through `wg.ctx`** (and namespaces split into
-   per-socket slots);
-3. a **manual `<<` wait edge** (`ctx` writes aren't dataflow edges);
-4. a **special-case to skip the loop** entirely for a single iteration.
+The docs steer to **recursion** instead, and there's a real reason: a `while` is
+a *cycle with mutable state*, but the engine is an immutable-provenance dataflow
+**DAG**. Recursion turns the cycle into a tree (each iteration spawns the next),
+so the loop variable is a real input node, the condition reads a resolved value,
+and the carried value is recorded as data links — native to the model. The
+`While` zone instead fakes the back-edge with `wg.ctx` (mutable side-channel) and
+manual `<<` waits — which is *why* it's awkward.
 
-Wish: a `repeat … until` that runs the body, threads its output as state
-automatically, and checks the condition *after* each pass. (Bonus wart: the
-"natural" `with While(x < 3): x = inc(x=x)` ignores `max_iterations` and hangs.)
+**But recursion is a workaround, not the answer.** It's harder to conceptualise,
+has a `max_depth` ceiling (default 100 iterations), and spawns a process per
+layer. And the `While` zone is a *shipped public construct the docs barely use*.
+
+Wish: **the `While` zone should be lowered to that recursive dataflow form
+internally** — auto-thread state, auto-insert the waits, support do-while, drop
+the unrolled first iteration — so users write the intuitive loop *and* get
+correct provenance. (Bonus wart: the "natural" `with While(x < 3): x = inc(x=x)`
+ignores `max_iterations` and hangs.)
 
 ## Gotchas that already work (guards)
 
