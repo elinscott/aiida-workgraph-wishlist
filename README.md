@@ -29,6 +29,22 @@ pytest -rX      # list the still-open wishes
 | index a `Map` item inline (`z.item.value["k"]`) | raises; needs a wrapper `@task` (yet `socket * 2` is fine) |
 | bad link-label name (`_foo`, `dft_n-1`) | task **silently skipped**, workgraph "succeeds" — should fail at build |
 
+## The heaviest tax: `While` (works, but brutal)
+
+A "run the body, loop until its output converges" algorithm (kcp.x alpha
+refinement) — see `test_while_zone.py` — has to be written with:
+
+1. the **first iteration fully duplicated** before the loop (no do-while: the
+   condition is checked *before* the body, so it needs a pre-seeded value);
+2. loop state **hand-plumbed through `wg.ctx`** (and namespaces split into
+   per-socket slots);
+3. a **manual `<<` wait edge** (`ctx` writes aren't dataflow edges);
+4. a **special-case to skip the loop** entirely for a single iteration.
+
+Wish: a `repeat … until` that runs the body, threads its output as state
+automatically, and checks the condition *after* each pass. (Bonus wart: the
+"natural" `with While(x < 3): x = inc(x=x)` ignores `max_iterations` and hangs.)
+
 ## Gotchas that already work (guards)
 
 | In a *deferred* `@task.graph` body | Outside (raw futures / nodes) |

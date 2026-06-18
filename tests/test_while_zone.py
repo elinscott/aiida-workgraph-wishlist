@@ -1,0 +1,62 @@
+"""``While`` zone ergonomics -- the heaviest tax we pay.
+
+A "do this, then loop until the result converges" algorithm (kcp.x alpha
+refinement in aiida-koopmans2 `ComputeScreeningParameters`) has to be written
+with a startling amount of ceremony, all of which the framework should hide:
+
+1. **The first iteration is fully duplicated** *before* the loop, because the
+   ``While`` condition reads a value the loop body produces, and there is no
+   do-while / repeat-until -- the condition is checked *before* the body, so it
+   needs a seeded value to look at.
+2. **Loop-carried state is plumbed by hand through ``wg.ctx``** -- and because
+   ``ctx`` stores per-socket, a namespace result (``filled`` + ``empty``) must
+   be split into separate ``ctx`` slots and reassembled inside the loop.
+3. **A manual ``<<`` wait edge** is needed (``cond << first.result``) because
+   ``ctx`` assignments do not create dataflow edges, so the condition would
+   otherwise be evaluated before the first iteration has produced a value.
+4. A **special-case to skip the whole loop** when only one iteration is wanted.
+
+The test below runs the minimal version of exactly that pattern (a counter that
+increments until it reaches 3). It PASSES -- the ceremony works -- but every line
+marked ``# tax:`` is overhead we wish we did not have to write. The wish: a
+``repeat ... until`` that runs the body, threads its output as state
+automatically, and checks the condition *after* each pass -- no unrolled first
+iteration, no ``wg.ctx``, no manual wait edge.
+
+(The "natural" formulation -- ``with While(x < 3): x = inc(x=x)`` -- is NOT run
+here: without ``ctx`` the condition never updates and the loop ignores
+``max_iterations`` and hangs, which is itself a wart.)
+"""
+
+from __future__ import annotations
+
+from aiida_workgraph import While, get_current_graph, task
+
+
+@task
+def inc(x: int) -> int:
+    return x + 1
+
+
+@task
+def record(x) -> dict:
+    return {"_tag": "while", "final": int(x)}
+
+
+def test_do_while_today_needs_unroll_ctx_and_wait_edges(collect):
+    """The do-while pattern works, but only with the full ceremony."""
+
+    @task.graph
+    def top():
+        first = inc(x=0)  # tax: first iteration unrolled before the loop
+        wg = get_current_graph()
+        wg.ctx.x = first.result  # tax: loop state hand-plumbed through ctx
+        cond = wg.ctx.x < 3
+        cond << first.result  # tax: manual wait edge (ctx writes are not dataflow)
+        with While(cond, max_iterations=5):
+            nxt = inc(x=wg.ctx.x)
+            wg.ctx.x = nxt.result  # tax: re-store state every pass
+        record(x=wg.ctx.x)
+
+    [r] = collect(top, "while")
+    assert r["final"] == 3
