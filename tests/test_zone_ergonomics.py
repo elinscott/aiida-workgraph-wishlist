@@ -15,12 +15,15 @@ The asymmetry (arithmetic builds an op task, subscript refuses) is itself worth
 raising with the devs.
 """
 
-from __future__ import annotations
-
 from typing import Annotated
 
 import pytest
-from aiida_workgraph import Map, dynamic, task
+from aiida_workgraph import Map, dynamic, namespace, task
+
+# NOTE: deliberately NO ``from __future__ import annotations`` here -- the dynamic
+# fan-out task needs its ``Annotated[dict, dynamic(dict)]`` hint resolved to a
+# real object at runtime (the engine reads it to build the namespace links);
+# stringised annotations break that with "name 'Annotated' is not defined".
 
 
 @task
@@ -74,7 +77,42 @@ def test_eager_subscript_of_future_raises_loudly():
 
 
 # ----------------------------------------------------------------------
-# WISH: the Map item should be ergonomic -- no `.value`, no unpack @task
+# The documented dynamic fan-out (no Map zone) -- this is the clean way
+# ----------------------------------------------------------------------
+
+
+def test_dynamic_fanout_via_for_loop_is_clean(collect):
+    """The docs' scatter-gather: ``for k, v in data.items()`` in a ``@task.graph``.
+
+    No ``Map`` zone, no ``.value``, no unpack ``@task``. The body is deferred, so
+    ``data`` is concrete: you iterate it and subscript each item inline. This is
+    the documented dynamic fan-out and the clean answer to both Map wishes below
+    -- aiida-koopmans2's Map zones (`unpack_block_item` etc.) are the anti-pattern.
+    """
+
+    @task
+    def items() -> Annotated[dict, namespace(data=dynamic(dict))]:
+        return {"data": {"k1": {"a": 1, "b": 2}, "k2": {"a": 10, "b": 20}}}
+
+    @task
+    def combine(a, b) -> dict:
+        return {"_tag": "fanout", "total": int(a) + int(b)}
+
+    @task.graph
+    def fan(data: Annotated[dict, dynamic(dict)]):
+        for _key, item in data.items():
+            combine(a=item["a"], b=item["b"])  # subscript inline; no unpack task
+
+    @task.graph
+    def top():
+        fan(data=items().data)
+
+    rs = collect(top, "fanout")
+    assert sorted(r["total"] for r in rs) == [3, 30]
+
+
+# ----------------------------------------------------------------------
+# WISH: IF you use the Map zone, it should be ergonomic (no `.value`, no unpack)
 # ----------------------------------------------------------------------
 
 
@@ -84,7 +122,8 @@ def test_eager_subscript_of_future_raises_loudly():
     "`z.item.value` to get the item (and `z.item.key` for its key). Passing "
     "`z.item` directly raises 'link a top-level output socket without a parent'. "
     "We wish the item were usable directly -- `.value` is internal machinery a "
-    "user should never have to type."
+    "user should never type. (Documented escape hatch: don't use the Map zone, "
+    "use `for k, v in data.items()` in a @task.graph -- see the guard above.)"
 )
 def test_map_item_usable_without_dot_value(collect):
     """WISH: ``z.item`` is the item, no ``.value`` ceremony."""
@@ -107,8 +146,9 @@ def test_map_item_usable_without_dot_value(collect):
     "it inline (`z.item.value['a']` raises). Destructuring an N-field item therefore "
     "forces a dedicated unpack @task with one named output per field (see "
     "aiida-koopmans2 `unpack_empty_item` / `unpack_block_item`) -- a per-iteration "
-    "process node and boilerplate that should not be necessary. We wish item fields "
-    "could feed a task directly."
+    "process node and boilerplate that should not be necessary. (Documented escape "
+    "hatch: `for k, v in data.items()` in a @task.graph subscripts inline -- see "
+    "the guard above; the Map zone is the anti-pattern.)"
 )
 def test_destructure_map_item_without_unpack_task(collect):
     """WISH: feed a Map item's fields into a task without a wrapper unpack @task."""
