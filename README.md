@@ -28,6 +28,9 @@ pytest -rX      # list the still-open wishes
 | destructure a `Map` item's fields | can't inline → forces an unpack `@task` (one named output per field) |
 | index a `Map` item inline (`z.item.value["k"]`) | raises; needs a wrapper `@task` (yet `socket * 2` is fine) |
 | bad link-label name (`_foo`, `dft_n-1`) | task **silently skipped**, workgraph "succeeds" — should fail at build |
+| `TypedDict` as a `@task.graph` return annotation | dynamic field becomes an opaque `dict`, not a consumable namespace — needs explicit `-> Annotated[dict, namespace(...)]` |
+| `from __future__ import annotations` + dynamic namespace | runtime `name 'Annotated' is not defined` — PEP 563 stringised hints unsupported |
+| gather → re-scatter | a gathered namespace feeds one task, but can't be iterated in another `@task.graph` loop |
 
 ## The heaviest tax: `While` (works, but brutal)
 
