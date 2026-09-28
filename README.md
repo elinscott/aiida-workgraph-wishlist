@@ -13,8 +13,9 @@ we had. Built to bring concrete pain points to the dev week.
 ```
 pytest          # green except XPASS
 pytest -rX      # list the still-open wishes
+uv run --group docs sphinx-build -W -b html docs docs/_build/html   # build the meeting page
 ```
-See the test contents for concrete examples and explanations.
+See the test contents for concrete examples and explanations. The meeting notes, with every example included from its test, are in `docs/index.rst`.
 
 One common theme is that the `TaggedValue`/socket proxy leaks into user Python with surprising, usually **silent** edges (`is`, `None`, scalar-as-node). The loud `GraphDeferredIllegalOperationError` on eager subscript is the model to extend.
 
