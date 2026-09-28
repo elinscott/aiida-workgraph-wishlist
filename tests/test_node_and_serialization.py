@@ -97,6 +97,7 @@ def test_workfunction_needed_to_emit_an_existing_node(collect):
     assert r["v"] == 909
 
 
+# mwe: scalar-dot-value
 def test_scalar_input_in_graph_body_needs_dot_value(collect):
     """A scalar input inside a ``@task.graph`` body is a proxy over an ``orm`` node.
 
@@ -130,3 +131,6 @@ def test_scalar_input_in_graph_body_needs_dot_value(collect):
     [r] = collect(top, "scalar")
     assert r["naive_ok"] is False  # the footgun: cannot use the scalar directly
     assert r["via_value"] == 777  # .value is the way through
+
+
+# end mwe: scalar-dot-value

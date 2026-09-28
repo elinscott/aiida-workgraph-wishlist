@@ -23,6 +23,12 @@ import pytest
 from aiida_workgraph import task
 
 
+# ----------------------------------------------------------------------
+# These WORK today (regression guards)
+# ----------------------------------------------------------------------
+
+
+# mwe: deferred-body-values
 class Kind(str, Enum):
     A = "a"
     B = "b"
@@ -31,11 +37,6 @@ class Kind(str, Enum):
 @task
 def make_block() -> dict:
     return {"n": 7, "kind": "a", "opt": None}
-
-
-# ----------------------------------------------------------------------
-# These WORK today (regression guards)
-# ----------------------------------------------------------------------
 
 
 def test_subscript_in_deferred_body_resolves(collect):
@@ -55,25 +56,6 @@ def test_subscript_in_deferred_body_resolves(collect):
 
     [r] = collect(top, "subscript")
     assert r["n"] == 7
-
-
-def test_eq_against_enum_in_deferred_body(collect):
-    """``==`` against an Enum member works (the proxy forwards ``__eq__``)."""
-
-    @task
-    def sink(eq) -> dict:
-        return {"_tag": "eq", "eq": eq}
-
-    @task.graph
-    def inner(block: dict):
-        sink(eq=(block["kind"] == Kind.A))
-
-    @task.graph
-    def top():
-        inner(block=make_block().result)
-
-    [r] = collect(top, "eq")
-    assert r["eq"] is True
 
 
 def test_structural_branch_in_deferred_body(collect):
@@ -126,6 +108,28 @@ def test_is_none_works_in_deferred_body(collect):
 
     [r] = collect(top, "is_none")
     assert r["is_none"] is True
+
+
+# end mwe: deferred-body-values
+
+
+def test_eq_against_enum_in_deferred_body(collect):
+    """``==`` against an Enum member works (the proxy forwards ``__eq__``)."""
+
+    @task
+    def sink(eq) -> dict:
+        return {"_tag": "eq", "eq": eq}
+
+    @task.graph
+    def inner(block: dict):
+        sink(eq=(block["kind"] == Kind.A))
+
+    @task.graph
+    def top():
+        inner(block=make_block().result)
+
+    [r] = collect(top, "eq")
+    assert r["eq"] is True
 
 
 # ----------------------------------------------------------------------

@@ -17,6 +17,7 @@ import pytest
 from aiida_workgraph import task
 
 
+# mwe: underscore-name
 def test_underscore_task_name_raises_at_build():
     """GUARD: a ``_underscore`` task name now fails loudly at build time."""
 
@@ -30,3 +31,6 @@ def test_underscore_task_name_raises_at_build():
 
     with pytest.raises(ValueError, match="cannot start with an underscore"):
         top.build()
+
+
+# end mwe: underscore-name

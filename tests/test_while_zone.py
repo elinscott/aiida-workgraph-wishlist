@@ -44,6 +44,7 @@ from __future__ import annotations
 from aiida_workgraph import While, get_current_graph, task
 
 
+# mwe: while-zone
 @task
 def inc(x: int) -> int:
     return x + 1
@@ -96,3 +97,6 @@ def test_same_loop_via_recursion_is_clean_but_has_costs(collect):
 
     [r] = collect(top, "while")
     assert r["final"] == 3
+
+
+# end mwe: while-zone

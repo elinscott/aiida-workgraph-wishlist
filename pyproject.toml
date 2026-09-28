@@ -29,3 +29,8 @@ testpaths = ["tests"]
 # wish) is a failure under strict markers.
 addopts = "-ra"
 xfail_strict = true
+
+[tool.ruff.lint.per-file-ignores]
+# Each `# mwe:` region in a test module is one docs example and must read on its
+# own, so a definition two regions share is repeated in each, identically.
+"tests/*" = ["F811"]

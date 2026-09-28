@@ -21,6 +21,7 @@ import pytest
 from aiida_workgraph import task
 
 
+# mwe: none-kwarg
 @pytest.mark.xfail(
     reason="aiida-workgraph 0.8.1: passing None as a task input argument silently "
     "drops the socket -- the parameter falls back to its default (or errors with "
@@ -40,6 +41,9 @@ def test_none_task_input_is_delivered(collect):
 
     [r] = collect(top, "none_kwarg")
     assert r["x_is_none"] is True
+
+
+# end mwe: none-kwarg
 
 
 def test_none_inside_opaque_dict_survives(collect):

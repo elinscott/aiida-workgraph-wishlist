@@ -67,6 +67,7 @@ def test_scalar_input_echoes(aiida_profile):
     assert graph.outputs.label.value.value == "x"
 
 
+# mwe: echo-dict-eager
 @pytest.mark.xfail(
     reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: returning a "
     "`dict` graph input from an eagerly-run body raises `TypeError: Invalid graph "
@@ -89,6 +90,9 @@ def test_dict_input_echoes_from_an_eager_body(aiida_profile):
     graph = echo_dict.build(payload={"a": 1})
     graph.run()
     assert dict(graph.outputs.payload.value) == {"a": 1}
+
+
+# end mwe: echo-dict-eager
 
 
 def test_dict_input_echoes_from_a_deferred_body(aiida_profile):
@@ -114,6 +118,7 @@ def test_dict_input_echoes_from_a_deferred_body(aiida_profile):
     assert _tagged("deferred_echo")[0]["a"] == 1
 
 
+# mwe: echo-passthrough
 def test_the_passthrough_task_we_ship(aiida_profile):
     """GUARD: laundering the value through a task that returns it unchanged.
 
@@ -132,3 +137,6 @@ def test_the_passthrough_task_we_ship(aiida_profile):
     graph = workaround.build(payload={"a": 1})
     graph.run()
     assert dict(graph.outputs.payload.value) == {"a": 1}
+
+
+# end mwe: echo-passthrough

@@ -35,6 +35,10 @@ Related upstream: scinode/node-graph #152 (``is`` semantics), #176 (what an
 Enum-typed input should receive), #178 (membership decided twice, DRAFT PR),
 #175 (``Literal`` unsupported), aiidateam/aiida-workgraph #800 (DRAFT PR).
 
+Each ``# mwe:`` region below is one example in ``docs/index.rst`` and must
+read on its own, so a definition two regions share is repeated in each,
+identically; the tests bind the last copy.
+
 NOTE: deliberately no ``from __future__ import annotations`` -- the Enum and
 ``Literal`` hints below are read at runtime to build the sockets.
 """
@@ -45,38 +49,6 @@ from typing import Literal
 import pytest
 from aiida import orm
 from aiida_workgraph import WorkGraph, task
-
-
-class SpinType(Enum):
-    """Stands in for aiida-quantumespresso's ``SpinType``."""
-
-    NONE = "none"
-    COLLINEAR = "collinear"
-    NON_COLLINEAR = "non_collinear"
-
-
-class Foreign(Enum):
-    """A different Enum that happens to share a member value."""
-
-    COLLINEAR = "collinear"
-
-
-def third_party(spin):
-    """Stand-in for library code that branches on identity, not equality."""
-    return "polarized" if spin is SpinType.COLLINEAR else "unpolarized"
-
-
-def coerce(enum_cls, value):
-    """The idiom aiida-koopmans2 applies at every body that forwards an Enum."""
-    return enum_cls(getattr(value, "value", value))
-
-
-@task
-def record(tag, verdict=None, eq=None, ok=None) -> dict:
-    # NOTE: the tag cannot be named `_tag` on the signature -- a leading
-    # underscore is a reserved builtin socket name and the assignment is
-    # refused at build.
-    return {"_tag": tag, "verdict": verdict, "eq": eq, "ok": ok}
 
 
 def _tagged(tag):
@@ -90,6 +62,15 @@ def _tagged(tag):
 # ----------------------------------------------------------------------
 # WISH: a member should be deliverable at all
 # ----------------------------------------------------------------------
+
+
+# mwe: enum-member-socket
+class SpinType(Enum):
+    """Stands in for aiida-quantumespresso's ``SpinType``."""
+
+    NONE = "none"
+    COLLINEAR = "collinear"
+    NON_COLLINEAR = "non_collinear"
 
 
 @pytest.mark.xfail(
@@ -139,9 +120,34 @@ def test_enum_nested_in_a_dict_is_refused(aiida_profile):
         top.build(cfg={"spin": SpinType.COLLINEAR}).run()
 
 
+# end mwe: enum-member-socket
+
+
 # ----------------------------------------------------------------------
 # WISH: what ``orm.EnumData`` then delivers -- two different things
 # ----------------------------------------------------------------------
+
+
+# mwe: enum-graph-body
+class SpinType(Enum):
+    """Stands in for aiida-quantumespresso's ``SpinType``."""
+
+    NONE = "none"
+    COLLINEAR = "collinear"
+    NON_COLLINEAR = "non_collinear"
+
+
+def third_party(spin):
+    """Stand-in for library code that branches on identity, not equality."""
+    return "polarized" if spin is SpinType.COLLINEAR else "unpolarized"
+
+
+@task
+def record(tag, verdict=None, eq=None, ok=None) -> dict:
+    # NOTE: the tag cannot be named `_tag` on the signature -- a leading
+    # underscore is a reserved builtin socket name and the assignment is
+    # refused at build.
+    return {"_tag": tag, "verdict": verdict, "eq": eq, "ok": ok}
 
 
 @pytest.mark.xfail(
@@ -174,6 +180,18 @@ def test_graph_body_receives_the_member(aiida_profile):
     assert (eager["verdict"], deferred["verdict"]) == ("polarized", "polarized")
 
 
+# end mwe: enum-graph-body
+
+
+# mwe: enum-task-body
+class SpinType(Enum):
+    """Stands in for aiida-quantumespresso's ``SpinType``."""
+
+    NONE = "none"
+    COLLINEAR = "collinear"
+    NON_COLLINEAR = "non_collinear"
+
+
 @pytest.mark.xfail(
     reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): the SAME `orm.EnumData` input "
     "reaches a plain @task body as the bare `str` 'collinear' -- the member's "
@@ -202,6 +220,9 @@ def test_task_body_receives_the_member(aiida_profile):
     assert seen["eq"] is True, f"arrived as {seen['type_name']}"
 
 
+# end mwe: enum-task-body
+
+
 def test_the_member_survives_to_dict_and_back(aiida_profile):
     """GUARD: the in-memory serialization keeps the member; only the run loses it.
 
@@ -225,61 +246,30 @@ def test_the_member_survives_to_dict_and_back(aiida_profile):
 
 
 # ----------------------------------------------------------------------
-# WISH: the declared Enum type should be a membership rule
-# ----------------------------------------------------------------------
-
-
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: a socket "
-    "annotated `spin: SpinType` accepts a member of a DIFFERENT Enum whose value "
-    "happens to match, at build and at run alike -- the annotation is shape, never "
-    "a content rule. We wish membership were checked once, at build, by the "
-    "builder alone, and the body then received the member unchanged. "
-    "(No escape hatch: every route hand-writes its own refusal.)"
-)
-def test_foreign_member_is_rejected_at_build(aiida_profile):
-    """WISH: ``Foreign.COLLINEAR`` is refused by a ``SpinType`` socket."""
-
-    @task
-    def leaf(spin) -> dict:
-        return {"_tag": "foreign", "seen": str(spin)}
-
-    @task.graph
-    def top(spin: SpinType):
-        leaf(spin=spin)
-
-    with pytest.raises(Exception):
-        top.build(spin=orm.EnumData(Foreign.COLLINEAR))
-
-
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: narrowing a "
-    "socket to two members with `Literal[SpinType.COLLINEAR, SpinType.NONE]` "
-    "constrains nothing -- `_leaf_from_type` drops Literal to a `workgraph.annotated` "
-    "socket carrying only `extras={'py_type': 'typing.Literal'}`, and "
-    "`SpinType.NON_COLLINEAR` builds and runs (scinode/node-graph #175). This is the "
-    "smallest contract we want short of a Pydantic input model: the BUILDER raises "
-    "on a member outside the narrowing, and the body then gets the member unchanged, "
-    "with no coercion anywhere. (No escape hatch: the route validates by hand.)"
-)
-def test_literal_narrowing_is_enforced_at_build(aiida_profile):
-    """WISH: a two-member ``Literal`` socket refuses the third member."""
-
-    @task
-    def leaf(spin: Literal[SpinType.COLLINEAR, SpinType.NONE]) -> dict:
-        return {"_tag": "literal", "seen": str(spin)}
-
-    @task.graph
-    def top(spin):
-        leaf(spin=spin)
-
-    with pytest.raises(Exception):
-        top.build(spin=orm.EnumData(SpinType.NON_COLLINEAR))
-
-
-# ----------------------------------------------------------------------
 # The workaround we ship, as a guard -- and as an anti-pattern
 # ----------------------------------------------------------------------
+
+
+# mwe: enum-coerce
+class SpinType(Enum):
+    """Stands in for aiida-quantumespresso's ``SpinType``."""
+
+    NONE = "none"
+    COLLINEAR = "collinear"
+    NON_COLLINEAR = "non_collinear"
+
+
+def coerce(enum_cls, value):
+    """The idiom aiida-koopmans2 applies at every body that forwards an Enum."""
+    return enum_cls(getattr(value, "value", value))
+
+
+@task
+def record(tag, verdict=None, eq=None, ok=None) -> dict:
+    # NOTE: the tag cannot be named `_tag` on the signature -- a leading
+    # underscore is a reserved builtin socket name and the assignment is
+    # refused at build.
+    return {"_tag": tag, "verdict": verdict, "eq": eq, "ok": ok}
 
 
 def test_the_coercion_we_apply_everywhere(aiida_profile):
@@ -307,3 +297,89 @@ def test_the_coercion_we_apply_everywhere(aiida_profile):
     top.build(spin=orm.EnumData(SpinType.COLLINEAR)).run()
     assert _tagged("coerced_body")[0]["ok"] is True
     assert _tagged("coerced_leaf")[0]["ok"] is True
+
+
+# end mwe: enum-coerce
+
+
+# ----------------------------------------------------------------------
+# WISH: the declared Enum type should be a membership rule
+# ----------------------------------------------------------------------
+
+
+# mwe: enum-foreign-member
+class SpinType(Enum):
+    """Stands in for aiida-quantumespresso's ``SpinType``."""
+
+    NONE = "none"
+    COLLINEAR = "collinear"
+    NON_COLLINEAR = "non_collinear"
+
+
+class Foreign(Enum):
+    """A different Enum that happens to share a member value."""
+
+    COLLINEAR = "collinear"
+
+
+@pytest.mark.xfail(
+    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: a socket "
+    "annotated `spin: SpinType` accepts a member of a DIFFERENT Enum whose value "
+    "happens to match, at build and at run alike -- the annotation is shape, never "
+    "a content rule. We wish membership were checked once, at build, by the "
+    "builder alone, and the body then received the member unchanged. "
+    "(No escape hatch: every route hand-writes its own refusal.)"
+)
+def test_foreign_member_is_rejected_at_build(aiida_profile):
+    """WISH: ``Foreign.COLLINEAR`` is refused by a ``SpinType`` socket."""
+
+    @task
+    def leaf(spin) -> dict:
+        return {"_tag": "foreign", "seen": str(spin)}
+
+    @task.graph
+    def top(spin: SpinType):
+        leaf(spin=spin)
+
+    with pytest.raises(Exception):
+        top.build(spin=orm.EnumData(Foreign.COLLINEAR))
+
+
+# end mwe: enum-foreign-member
+
+
+# mwe: enum-literal
+class SpinType(Enum):
+    """Stands in for aiida-quantumespresso's ``SpinType``."""
+
+    NONE = "none"
+    COLLINEAR = "collinear"
+    NON_COLLINEAR = "non_collinear"
+
+
+@pytest.mark.xfail(
+    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: narrowing a "
+    "socket to two members with `Literal[SpinType.COLLINEAR, SpinType.NONE]` "
+    "constrains nothing -- `_leaf_from_type` drops Literal to a `workgraph.annotated` "
+    "socket carrying only `extras={'py_type': 'typing.Literal'}`, and "
+    "`SpinType.NON_COLLINEAR` builds and runs (scinode/node-graph #175). This is the "
+    "smallest contract we want short of a Pydantic input model: the BUILDER raises "
+    "on a member outside the narrowing, and the body then gets the member unchanged, "
+    "with no coercion anywhere. (No escape hatch: the route validates by hand.)"
+)
+def test_literal_narrowing_is_enforced_at_build(aiida_profile):
+    """WISH: a two-member ``Literal`` socket refuses the third member."""
+
+    @task
+    def leaf(spin: Literal[SpinType.COLLINEAR, SpinType.NONE]) -> dict:
+        return {"_tag": "literal", "seen": str(spin)}
+
+    @task.graph
+    def top(spin):
+        leaf(spin=spin)
+
+    with pytest.raises(Exception):
+        top.build(spin=orm.EnumData(SpinType.NON_COLLINEAR))
+
+
+# end mwe: enum-literal

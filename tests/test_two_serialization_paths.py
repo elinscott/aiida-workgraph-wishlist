@@ -34,6 +34,10 @@ grading.
 
 Two wishes: one serialization path a test can exercise, and an error message
 that names the child that mismatched.
+
+Each ``# mwe:`` region below is one example in ``docs/index.rst`` and must
+read on its own, so a definition two regions share is repeated in each,
+identically; the tests bind the last copy.
 """
 
 import json
@@ -45,23 +49,9 @@ from aiida import orm
 from aiida_workgraph import WorkGraph, dynamic, namespace, task
 
 
+# mwe: to-dict-live
 class SpinType(Enum):
     COLLINEAR = "collinear"
-
-
-class Dataset(TypedDict):
-    x: int
-    y: int
-
-
-@task
-def extract(seed: int) -> Annotated[dict, namespace(x=int, y=int)]:
-    return {"x": seed, "y": seed * 2}
-
-
-@task
-def train(datasets: Annotated[dict, dynamic(Dataset)]) -> dict:
-    return {"_tag": "train", "n": len(dict(datasets))}
 
 
 def test_to_dict_returns_live_objects(aiida_profile):
@@ -85,6 +75,14 @@ def test_to_dict_returns_live_objects(aiida_profile):
     assert data["tasks"]["graph_inputs"]["inputs"]["spin"] is SpinType.COLLINEAR
     with pytest.raises(TypeError):
         json.dumps(data)
+
+
+# end mwe: to-dict-live
+
+
+# mwe: round-trip-runs
+class SpinType(Enum):
+    COLLINEAR = "collinear"
 
 
 @pytest.mark.xfail(
@@ -112,30 +110,30 @@ def test_a_graph_that_round_trips_also_runs(aiida_profile):
     graph.run()  # ValueError: Cannot serialize the provided object
 
 
+# end mwe: round-trip-runs
+
+
+# mwe: checkpoint-path
+class Dataset(TypedDict):
+    x: int
+    y: int
+
+
+@task
+def extract(seed: int) -> Annotated[dict, namespace(x=int, y=int)]:
+    return {"x": seed, "y": seed * 2}
+
+
+@task
+def train(datasets: Annotated[dict, dynamic(Dataset)]) -> dict:
+    return {"_tag": "train", "n": len(dict(datasets))}
+
+
 @task.graph
 def fan_into_dynamic_namespace(seed: int):
     """The shape that died on the daemon: a fan-out into a typed dynamic input."""
     datasets = {f"snap_{i}": extract(seed=seed + i) for i in range(2)}
     train(datasets=datasets)
-
-
-def test_typed_dynamic_namespace_round_trips_and_runs(aiida_profile):
-    """GUARD: the shape that died on the daemon passes both in-process checks.
-
-    On this version the fan-out into a TypedDict-typed dynamic input namespace
-    both round-trips and runs, so the failure it once caused is not visible
-    here. Pinned rather than dropped, because the shape is the one that broke.
-    """
-    graph = fan_into_dynamic_namespace.build(seed=1)
-    WorkGraph.from_dict(graph.to_dict())
-    graph.run()
-
-    [result] = [
-        node.get_dict()
-        for (node,) in orm.QueryBuilder().append(orm.Dict).all()
-        if node.get_dict().get("_tag") == "train"
-    ]
-    assert result["n"] == 2
 
 
 def test_the_checkpoint_path_can_be_driven_without_a_daemon(aiida_profile):
@@ -169,3 +167,25 @@ def test_the_checkpoint_path_can_be_driven_without_a_daemon(aiida_profile):
 
     WorkGraph.from_dict(restore_workgraph_data_from_raw_inputs(dict(restored.inputs)))
     restored.setup()
+
+
+# end mwe: checkpoint-path
+
+
+def test_typed_dynamic_namespace_round_trips_and_runs(aiida_profile):
+    """GUARD: the shape that died on the daemon passes both in-process checks.
+
+    On this version the fan-out into a TypedDict-typed dynamic input namespace
+    both round-trips and runs, so the failure it once caused is not visible
+    here. Pinned rather than dropped, because the shape is the one that broke.
+    """
+    graph = fan_into_dynamic_namespace.build(seed=1)
+    WorkGraph.from_dict(graph.to_dict())
+    graph.run()
+
+    [result] = [
+        node.get_dict()
+        for (node,) in orm.QueryBuilder().append(orm.Dict).all()
+        if node.get_dict().get("_tag") == "train"
+    ]
+    assert result["n"] == 2

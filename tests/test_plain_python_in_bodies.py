@@ -30,6 +30,10 @@ Related upstream: aiidateam/aiida-workgraph #779 (``None`` inputs), #780
 (deserializing an ``orm`` node into a body). ``test_none_handling.py`` covers
 ``None`` as a plain task argument; this module is about structured sockets.
 
+Each ``# mwe:`` region below is one example in ``docs/index.rst`` and must
+read on its own, so a definition two regions share is repeated in each,
+identically; the tests bind the last copy.
+
 NOTE: deliberately no ``from __future__ import annotations`` -- the dataclass
 and TypedDict hints below are read at runtime to build the sockets.
 """
@@ -42,26 +46,6 @@ from aiida import orm
 from aiida_workgraph import task
 
 
-@dataclass
-class Settings:
-    """The shape aiida-koopmans2's ``KcpBaseInputs`` has, minus the physics."""
-
-    nspin: int = 1
-    tot_magnetization: Optional[float] = None
-
-
-class SettingsTypedDict(TypedDict, total=False):
-    """The same shape spelled the project's standard way."""
-
-    nspin: int
-    tot_magnetization: Optional[float]
-
-
-@task
-def record(tag, detail) -> dict:
-    return {"_tag": tag, "detail": detail}
-
-
 def _tagged(tag):
     return [
         node.get_dict()
@@ -71,8 +55,100 @@ def _tagged(tag):
 
 
 # ----------------------------------------------------------------------
+# A None field is a field
+# ----------------------------------------------------------------------
+
+
+# mwe: none-typeddict-field
+class SettingsTypedDict(TypedDict, total=False):
+    """The settings shape spelled as a TypedDict, the project's standard way."""
+
+    nspin: int
+    tot_magnetization: Optional[float]
+
+
+@pytest.mark.xfail(
+    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a `None`-valued field of a "
+    "TypedDict socket is dropped in transit -- the far side sees keys ['nspin'] and "
+    "`tot_magnetization` is simply absent, with no error. A closed-shell system "
+    "whose `tot_magnetization` is legitimately None is therefore indistinguishable "
+    "from one that never set it. We wish a `None` field arrived as a field whose "
+    "value is None. (Documented escape hatch: model the shape as a dataclass "
+    "instead -- but see the next test for what that costs today.) Upstream #779."
+)
+def test_none_field_of_a_typeddict_survives(aiida_profile):
+    """WISH: ``tot_magnetization=None`` is still a key on the far side."""
+
+    @task
+    def leaf(cfg: SettingsTypedDict) -> dict:
+        return {"_tag": "td_none", "detail": ",".join(sorted(dict(cfg)))}
+
+    @task.graph
+    def top(cfg: SettingsTypedDict):
+        leaf(cfg=cfg)
+
+    top.build(cfg=SettingsTypedDict(nspin=1, tot_magnetization=None)).run()
+    assert _tagged("td_none")[0]["detail"] == "nspin,tot_magnetization"
+
+
+# end mwe: none-typeddict-field
+
+
+# mwe: dataclass-default
+@dataclass
+class Settings:
+    """The shape aiida-koopmans2's ``KcpBaseInputs`` has, minus the physics."""
+
+    nspin: int = 1
+    tot_magnetization: Optional[float] = None
+
+
+@pytest.mark.xfail(
+    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): the dataclass escape hatch no "
+    "longer works either. A field with a default -- `tot_magnetization: "
+    "Optional[float] = None` -- yields a REQUIRED socket, so building with the "
+    "dataclass at its own default raises `ValueError: Missing required inputs: "
+    "graph_inputs.cfg.tot_magnetization, leaf.cfg.tot_magnetization`. Passing "
+    "`tot_magnetization=None` explicitly raises the same thing, because an explicit "
+    "None is dropped first and then reported as absent. We wish a defaulted field "
+    "were optional. (Escape hatch: give every Optional field a non-None sentinel, "
+    "or carry the shape as one opaque dict value.)"
+)
+def test_dataclass_default_is_not_a_missing_input(aiida_profile):
+    """WISH: a dataclass at its own defaults builds."""
+
+    @task
+    def leaf(cfg: Settings) -> dict:
+        return {"_tag": "dc_default", "detail": repr(cfg.tot_magnetization)}
+
+    @task.graph
+    def top(cfg: Settings):
+        leaf(cfg=cfg)
+
+    top.build(cfg=Settings()).run()
+    assert _tagged("dc_default")[0]["detail"] == "None"
+
+
+# end mwe: dataclass-default
+
+
+# ----------------------------------------------------------------------
 # A dataclass field: plain in a task body, an orm node in a graph body
 # ----------------------------------------------------------------------
+
+
+# mwe: int-field
+@dataclass
+class Settings:
+    """The shape aiida-koopmans2's ``KcpBaseInputs`` has, minus the physics."""
+
+    nspin: int = 1
+    tot_magnetization: Optional[float] = None
+
+
+@task
+def record(tag, detail) -> dict:
+    return {"_tag": tag, "detail": detail}
 
 
 def test_task_body_rebuilds_the_dataclass(aiida_profile):
@@ -116,9 +192,18 @@ def test_graph_body_int_field_is_an_int(aiida_profile):
     assert _tagged("graph_dc")[0]["detail"] == "[0, 1]"
 
 
+# end mwe: int-field
+
+
 # ----------------------------------------------------------------------
 # The same body, two languages: eager vs deferred
 # ----------------------------------------------------------------------
+
+
+# mwe: dict-input
+@task
+def record(tag, detail) -> dict:
+    return {"_tag": tag, "detail": detail}
 
 
 @pytest.mark.xfail(
@@ -151,59 +236,7 @@ def test_dict_input_is_the_same_on_both_paths(aiida_profile):
     assert _tagged("deferred_dict")[0]["detail"] == "True"
 
 
-# ----------------------------------------------------------------------
-# A None field is a field
-# ----------------------------------------------------------------------
-
-
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a `None`-valued field of a "
-    "TypedDict socket is dropped in transit -- the far side sees keys ['nspin'] and "
-    "`tot_magnetization` is simply absent, with no error. A closed-shell system "
-    "whose `tot_magnetization` is legitimately None is therefore indistinguishable "
-    "from one that never set it. We wish a `None` field arrived as a field whose "
-    "value is None. (Documented escape hatch: model the shape as a dataclass "
-    "instead -- but see the next test for what that costs today.) Upstream #779."
-)
-def test_none_field_of_a_typeddict_survives(aiida_profile):
-    """WISH: ``tot_magnetization=None`` is still a key on the far side."""
-
-    @task
-    def leaf(cfg: SettingsTypedDict) -> dict:
-        return {"_tag": "td_none", "detail": ",".join(sorted(dict(cfg)))}
-
-    @task.graph
-    def top(cfg: SettingsTypedDict):
-        leaf(cfg=cfg)
-
-    top.build(cfg=SettingsTypedDict(nspin=1, tot_magnetization=None)).run()
-    assert _tagged("td_none")[0]["detail"] == "nspin,tot_magnetization"
-
-
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): the dataclass escape hatch no "
-    "longer works either. A field with a default -- `tot_magnetization: "
-    "Optional[float] = None` -- yields a REQUIRED socket, so building with the "
-    "dataclass at its own default raises `ValueError: Missing required inputs: "
-    "graph_inputs.cfg.tot_magnetization, leaf.cfg.tot_magnetization`. Passing "
-    "`tot_magnetization=None` explicitly raises the same thing, because an explicit "
-    "None is dropped first and then reported as absent. We wish a defaulted field "
-    "were optional. (Escape hatch: give every Optional field a non-None sentinel, "
-    "or carry the shape as one opaque dict value.)"
-)
-def test_dataclass_default_is_not_a_missing_input(aiida_profile):
-    """WISH: a dataclass at its own defaults builds."""
-
-    @task
-    def leaf(cfg: Settings) -> dict:
-        return {"_tag": "dc_default", "detail": repr(cfg.tot_magnetization)}
-
-    @task.graph
-    def top(cfg: Settings):
-        leaf(cfg=cfg)
-
-    top.build(cfg=Settings()).run()
-    assert _tagged("dc_default")[0]["detail"] == "None"
+# end mwe: dict-input
 
 
 # ----------------------------------------------------------------------
@@ -211,6 +244,7 @@ def test_dataclass_default_is_not_a_missing_input(aiida_profile):
 # ----------------------------------------------------------------------
 
 
+# mwe: file-node
 @pytest.mark.xfail(
     reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / aiida-pythonjob 0.5.2: a "
     "`SinglefileData` input to a plain @task fails at run with `ValueError: Cannot "
@@ -239,6 +273,9 @@ def test_plain_task_can_take_a_file_node(aiida_profile, tmp_path):
 
     top.build(f=node).run()
     assert _tagged("sfd_task")[0]["detail"] == "hello"
+
+
+# end mwe: file-node
 
 
 def test_calcfunction_is_the_only_way_to_a_file_node(aiida_profile, tmp_path):

@@ -18,6 +18,7 @@ from typing import Annotated
 from aiida_workgraph import dynamic, namespace, task
 
 
+# mwe: future-annotations
 def test_dynamic_namespace_works_under_future_annotations(collect):
     @task
     def src() -> Annotated[dict, namespace(data=dynamic(int))]:
@@ -38,3 +39,6 @@ def test_dynamic_namespace_works_under_future_annotations(collect):
 
     rs = collect(top, "future")
     assert sorted(r["v"] for r in rs) == [1, 2]
+
+
+# end mwe: future-annotations

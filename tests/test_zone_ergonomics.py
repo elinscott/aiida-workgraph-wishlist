@@ -32,14 +32,41 @@ from aiida_workgraph import Map, dynamic, namespace, task
 # stringised annotations break that with "name 'Annotated' is not defined".
 
 
+# ----------------------------------------------------------------------
+# These WORK today (regression guards)
+# ----------------------------------------------------------------------
+
+
+# mwe: map-value
 @task
 def make_items() -> Annotated[dict, dynamic(dict)]:
     return {"i1": {"n": 7}, "i2": {"n": 99}}
 
 
-# ----------------------------------------------------------------------
-# These WORK today (regression guards)
-# ----------------------------------------------------------------------
+def test_map_value_is_the_item(collect):
+    """GUARD: ``z.value`` is the current entry, ``z.key`` its key.
+
+    Was a wish (#785): the zone used to expose ``z.item``, the map_item task's
+    OUTPUTS namespace, so user code had to write ``z.item.value`` -- internal
+    machinery a user should never type -- and passing ``z.item`` itself raised
+    "link a top-level output socket without a parent". #792 granted it.
+    ``z.item`` still resolves, with a DeprecationWarning.
+    """
+
+    @task
+    def sink(item, key) -> dict:
+        return {"_tag": "map_value", "n": item["n"], "key": str(key)}
+
+    @task.graph
+    def top():
+        with Map(make_items()) as z:
+            sink(item=z.value, key=z.key)
+
+    rs = collect(top, "map_value")
+    assert sorted((r["key"], r["n"]) for r in rs) == [("i1", 7), ("i2", 99)]
+
+
+# end mwe: map-value
 
 
 def test_socket_arithmetic_builds_operator_tasks(collect):
@@ -82,34 +109,12 @@ def test_eager_subscript_of_future_raises_loudly():
         top.build()
 
 
-def test_map_value_is_the_item(collect):
-    """GUARD: ``z.value`` is the current entry, ``z.key`` its key.
-
-    Was a wish (#785): the zone used to expose ``z.item``, the map_item task's
-    OUTPUTS namespace, so user code had to write ``z.item.value`` -- internal
-    machinery a user should never type -- and passing ``z.item`` itself raised
-    "link a top-level output socket without a parent". #792 granted it.
-    ``z.item`` still resolves, with a DeprecationWarning.
-    """
-
-    @task
-    def sink(item, key) -> dict:
-        return {"_tag": "map_value", "n": item["n"], "key": str(key)}
-
-    @task.graph
-    def top():
-        with Map(make_items()) as z:
-            sink(item=z.value, key=z.key)
-
-    rs = collect(top, "map_value")
-    assert sorted((r["key"], r["n"]) for r in rs) == [("i1", 7), ("i2", 99)]
-
-
 # ----------------------------------------------------------------------
 # The documented dynamic fan-out (no Map zone) -- this is the clean way
 # ----------------------------------------------------------------------
 
 
+# mwe: for-loop-fanout
 def test_dynamic_fanout_via_for_loop_is_clean(collect):
     """The docs' scatter-gather: ``for k, v in data.items()`` in a ``@task.graph``.
 
@@ -140,11 +145,15 @@ def test_dynamic_fanout_via_for_loop_is_clean(collect):
     assert sorted(r["total"] for r in rs) == [3, 30]
 
 
+# end mwe: for-loop-fanout
+
+
 # ----------------------------------------------------------------------
 # WISH: destructuring a Map item should not need an unpack @task
 # ----------------------------------------------------------------------
 
 
+# mwe: map-destructure
 @pytest.mark.xfail(
     reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: a Map entry "
     "is a future, so it cannot be subscripted inline -- `z.value['a']` raises "
@@ -175,3 +184,6 @@ def test_destructure_map_item_without_unpack_task(collect):
 
     rs = collect(top, "destructure")
     assert sorted(r["total"] for r in rs) == [3, 30]
+
+
+# end mwe: map-destructure

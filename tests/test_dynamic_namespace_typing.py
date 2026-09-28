@@ -22,6 +22,13 @@ import pytest
 from aiida_workgraph import dynamic, namespace, task
 
 
+# ----------------------------------------------------------------------
+# Guard: explicit dynamic(namespace(...)) gather IS consumable downstream;
+# WISH: a TypedDict-typed dynamic output should be equally consumable
+# ----------------------------------------------------------------------
+
+
+# mwe: typeddict-return
 @task
 def numbers() -> Annotated[dict, namespace(data=dynamic(dict))]:
     return {"data": {"k1": {"a": 1}, "k2": {"a": 2}}}
@@ -32,11 +39,6 @@ def ident(x) -> int:
     # a graph task must return task OUTPUT SOCKETS, not raw values, so item
     # fields are routed through this passthrough before being assembled.
     return int(x)
-
-
-# ----------------------------------------------------------------------
-# Guard: explicit dynamic(namespace(...)) gather IS consumable downstream
-# ----------------------------------------------------------------------
 
 
 def test_explicit_namespace_gather_is_consumable(collect):
@@ -63,11 +65,6 @@ def test_explicit_namespace_gather_is_consumable(collect):
 
     [r] = collect(top, "explicit_ns")
     assert r["total"] == 3
-
-
-# ----------------------------------------------------------------------
-# WISH: a TypedDict-typed dynamic output should be equally consumable
-# ----------------------------------------------------------------------
 
 
 class Item(TypedDict):
@@ -115,11 +112,16 @@ def test_typeddict_return_annotation_is_consumable(collect):
     assert r["total"] == 3
 
 
+# end mwe: typeddict-return
+
+
 # ----------------------------------------------------------------------
 # WISH: a gathered namespace should be re-scatterable, not just single-consumed
 # ----------------------------------------------------------------------
 
 
+
+# mwe: rescatter
 @pytest.mark.xfail(
     reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: a gathered dynamic-namespace OUTPUT can be fed to "
     "one downstream task, but iterating it in another @task.graph "
@@ -154,3 +156,6 @@ def test_gather_then_rescatter(collect):
 
     rs = collect(top, "rescatter")
     assert sorted(r["v"] for r in rs) == [2, 4]
+
+
+# end mwe: rescatter
