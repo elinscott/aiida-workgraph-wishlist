@@ -29,7 +29,7 @@ Each module opens with a docstring stating the mechanism and which of its cases 
 | `test_enum_coercion.py` | an `Enum` member never arrives as itself — unserializable bare, a node proxy in a graph body, a bare `str` in a task body; and the socket's Enum type is never a membership rule | 3 | 5 |
 | `test_plain_python_in_bodies.py` | a body does not get the types its signature declares: `orm.Int` for an `int` field, `orm.Dict` or `dict` for a `dict` depending on the call site, a vanished `None` field, a defaulted field reported missing, a file node only a calcfunction can hold | 2 | 5 |
 | `test_graph_echoes_input.py` | returning a graph input as a graph output is refused eagerly and accepted deferred | 3 | 1 |
-| `test_two_serialization_paths.py` | `to_dict()` hands back live objects, so a `from_dict(to_dict())` guard can be green on a graph that dies at run | 2 | 1 |
+| `test_two_serialization_paths.py` | `to_dict()` hands back live objects, so a `from_dict(to_dict())` guard can be green on a graph that dies at run; plus the undocumented recipe for driving the daemon's own checkpoint path | 3 | 1 |
 | `test_graph_body_values.py` | what a deferred body sees: subscript, `==` and `is None` work, `is <enum>` is silently False | 4 | 1 |
 | `test_node_and_serialization.py` | node-vs-value surprises at task boundaries | 5 | — |
 | `test_none_handling.py` | `None` as a task argument is dropped; `None` inside an opaque dict survives | 1 | 1 |

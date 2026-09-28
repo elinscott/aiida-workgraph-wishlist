@@ -12,18 +12,25 @@ that check is weaker than it looks:
 * so a graph can round-trip perfectly and still fail the moment it runs, on the
   values the round-trip handed back untouched -> WISH.
 
-There is a third path this module cannot reach: the daemon persists
-``task_inputs`` to the database on launch and rebuilds them in
-``WorkGraphEngine.setup`` via ``restore_workgraph_data_from_raw_inputs``. An
-in-process ``run()`` reaches that function with the live inputs, so the database
-encode/decode never happens. A typed dynamic namespace on a task INPUT
-(``datasets: Annotated[dict, dynamic(SnapshotDataset)]``) killed a live
-workflow there with ``ValueError: Namespace structures do not match for
-linking: ... Missing in source: []. Missing in target: []`` -- both lists empty,
-because the check that failed was namespace-vs-leaf on a child the message
-cannot name -- while ``from_dict(to_dict())`` on that exact graph succeeded.
-That failure is NOT reproduced here; the reproduction recipe and its grading
-are in ``proposed-issues/14-aiida-workgraph-two-serialization-paths.md``.
+There is a third path, the one the daemon takes: ``submit()`` saves a plumpy
+checkpoint bundle and a worker unbundles it and steps the process, so the
+inputs go through ``aiida.orm.utils.serialize`` rather than arriving live.
+That path CAN be driven without a daemon, and the last guard below does it --
+but nothing documents the recipe, and it is assembled from four private-ish
+pieces (``instantiate_process``, ``AiiDAPersister``, ``get_object_loader``,
+``Bundle.unbundle``).
+
+A typed dynamic namespace on a task INPUT (``datasets: Annotated[dict,
+dynamic(SnapshotDataset)]``) killed a live workflow on that path with
+``ValueError: Namespace structures do not match for linking: ... Missing in
+source: []. Missing in target: []`` -- both lists empty, because the check that
+failed was namespace-vs-leaf on a child the message cannot name -- while
+``from_dict(to_dict())`` on that exact graph succeeded. That failure does NOT
+reproduce on this version: the same shape round-trips, runs, and survives the
+checkpoint bundle. It is pinned below as a guard rather than dropped, since the
+shape is the one that broke. See
+``proposed-issues/14-aiida-workgraph-two-serialization-paths.md`` for the
+grading.
 
 Two wishes: one serialization path a test can exercise, and an error message
 that names the child that mismatched.
@@ -105,21 +112,21 @@ def test_a_graph_that_round_trips_also_runs(aiida_profile):
     graph.run()  # ValueError: Cannot serialize the provided object
 
 
+@task.graph
+def fan_into_dynamic_namespace(seed: int):
+    """The shape that died on the daemon: a fan-out into a typed dynamic input."""
+    datasets = {f"snap_{i}": extract(seed=seed + i) for i in range(2)}
+    train(datasets=datasets)
+
+
 def test_typed_dynamic_namespace_round_trips_and_runs(aiida_profile):
     """GUARD: the shape that died on the daemon passes both in-process checks.
 
-    Pinned as the negative control for the daemon-only failure described in the
-    module docstring: on this version the fan-out into a TypedDict-typed
-    dynamic input namespace both round-trips and runs, so an in-process suite
-    has nothing to catch.
+    On this version the fan-out into a TypedDict-typed dynamic input namespace
+    both round-trips and runs, so the failure it once caused is not visible
+    here. Pinned rather than dropped, because the shape is the one that broke.
     """
-
-    @task.graph
-    def top(seed: int):
-        datasets = {f"snap_{i}": extract(seed=seed + i) for i in range(2)}
-        train(datasets=datasets)
-
-    graph = top.build(seed=1)
+    graph = fan_into_dynamic_namespace.build(seed=1)
     WorkGraph.from_dict(graph.to_dict())
     graph.run()
 
@@ -129,3 +136,36 @@ def test_typed_dynamic_namespace_round_trips_and_runs(aiida_profile):
         if node.get_dict().get("_tag") == "train"
     ]
     assert result["n"] == 2
+
+
+def test_the_checkpoint_path_can_be_driven_without_a_daemon(aiida_profile):
+    """GUARD: the recipe for exercising what the daemon will actually do.
+
+    ``submit()`` saves a plumpy checkpoint bundle and a worker unbundles it and
+    steps the process, so the inputs reach ``WorkGraphEngine.setup`` through
+    ``aiida.orm.utils.serialize`` rather than live. Reassembling that here
+    takes four pieces and no documentation, which is the wish this module ends
+    on; the same fan-out survives it.
+    """
+    import plumpy.persistence
+    from aiida.engine.persistence import AiiDAPersister, get_object_loader
+    from aiida.engine.utils import instantiate_process
+    from aiida.manage import get_manager
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine
+    from aiida_workgraph.utils import restore_workgraph_data_from_raw_inputs
+
+    graph = fan_into_dynamic_namespace.build(seed=1)
+    graph.check_before_run()
+
+    runner = get_manager().get_runner()
+    process = instantiate_process(runner, WorkGraphEngine, **graph.to_engine_inputs())
+
+    persister = AiiDAPersister()
+    persister.save_checkpoint(process)
+    process.close()
+
+    context = plumpy.persistence.LoadSaveContext(loader=get_object_loader(), runner=runner)
+    restored = persister.load_checkpoint(process.pid).unbundle(context)
+
+    WorkGraph.from_dict(restore_workgraph_data_from_raw_inputs(dict(restored.inputs)))
+    restored.setup()

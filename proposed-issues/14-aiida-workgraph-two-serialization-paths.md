@@ -7,17 +7,25 @@ BODY:
 
 The obvious way to test that a graph will survive being handed to the engine is `WorkGraph.from_dict(wg.to_dict())`, and we run exactly that as a shared fixture over every graph shape in our package. It is weaker than it looks, for a mechanical reason: `to_dict()` returns a dict of live Python objects. A graph input comes back as the identical object (`data[...]["spin"] is SpinType.COLLINEAR`), and the structure as a whole is not JSON-encodable, so the round-trip exercises no encoder the engine will use. A graph can therefore pass the round-trip and then die at run on the very value the round-trip handed back untouched.
 
-There is a third path neither half reaches. On launch the daemon persists `task_inputs` to the database and rebuilds them in `WorkGraphEngine.setup` via `restore_workgraph_data_from_raw_inputs` (`aiida_workgraph/utils/__init__.py:351`); an in-process `run()` reaches that same function with the live inputs, so the database encode/decode never happens. A typed dynamic namespace on a task *input* — `datasets: Annotated[dict, dynamic(SnapshotDataset)]` — killed a live workflow there with
+There is a third path neither half reaches by default: the one the daemon takes. `submit()` saves a plumpy checkpoint bundle and a worker unbundles it and steps the process, so the inputs reach `WorkGraphEngine.setup` through `aiida.orm.utils.serialize` rather than arriving live. That path *can* be driven without a daemon, but nothing says so and the recipe is four pieces deep:
 
+```python
+process = instantiate_process(get_manager().get_runner(), WorkGraphEngine, **wg.to_engine_inputs())
+AiiDAPersister().save_checkpoint(process)
+process.close()
+context = plumpy.persistence.LoadSaveContext(loader=get_object_loader(), runner=runner)
+restored = AiiDAPersister().load_checkpoint(process.pid).unbundle(context)
+WorkGraph.from_dict(restore_workgraph_data_from_raw_inputs(dict(restored.inputs)))
+restored.setup()
 ```
-ValueError: Namespace structures do not match for linking:
-  extract_snapshot_dataset.outputs vs train_screening_model.inputs.datasets.snapshot_1.
-  Missing in source: []. Missing in target: [].
-```
 
-Both lists are empty because `node_graph/graph.py:_namespace_structures_match` failed a namespace-vs-leaf comparison on a child, and the message has no way to name which one. `from_dict(to_dict())` on that exact graph succeeded in-process.
+That a test author has to assemble this to learn whether their graph will start is the second half of the problem.
 
-Grading, honestly: the round-trip weakness and the run-time failure that follows it are **reproduced** (see the MWE). The daemon-only failure above is **observed in production but not reduced to a minimal example** — we could not drive the database round-trip of `task_inputs` without a daemon. Reproduction recipe, for anyone with a daemon to hand: build a fan-out whose per-entry producer is a namespace-valued task and whose consumer declares `Annotated[dict, dynamic(SomeTypedDict)]`, assert `WorkGraph.from_dict(wg.to_dict())` succeeds, then `wg.submit()` it and read the engine's exception from the process report. The empty `Missing in source` / `Missing in target` lists are the signature.
+Grading, honestly:
+
+- **Reproduced**: `to_dict()` returns live objects, is not JSON-encodable, and a graph passes `from_dict(to_dict())` and then dies at run (the MWE below).
+- **Reproduced**: the checkpoint path can be driven in-process with the calls above.
+- **Not reproduced on this version**: a typed dynamic namespace on a task input — `datasets: Annotated[dict, dynamic(SnapshotDataset)]`, fanned into from a `@task.graph` loop — killed a live workflow at run start on aiida-workgraph 0.8.1 with `ValueError: Namespace structures do not match for linking: extract_snapshot_dataset.outputs vs train_screening_model.inputs.datasets.snapshot_1. Missing in source: []. Missing in target: []` while `from_dict(to_dict())` on that same graph succeeded. Rebuilt minimally against 0.9.0 the shape round-trips, runs, and survives the checkpoint bundle, so either it was fixed between the two or the minimization misses the trigger. The message itself remains worth fixing whatever the cause: both lists are empty because `node_graph/graph.py:_namespace_structures_match` failed a namespace-vs-leaf comparison on a child it cannot name.
 
 ## MWE
 
