@@ -80,7 +80,7 @@ wheels = [
 [[package]]
 name = "aiida-workgraph"
 version = "0.8.1"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/aiidateam/aiida-workgraph.git?rev=main#07d74c6c50ac00490d97eb083d05bbdf5c8f096f" }
 dependencies = [
     { name = "aiida-core" },
     { name = "aiida-pythonjob" },
@@ -92,10 +92,6 @@ dependencies = [
     { name = "numpy" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/87/0a/90eea7ffc10e748e8135efe108a435c9a7b70969b20a34fac42293f658f2/aiida_workgraph-0.8.1.tar.gz", hash = "sha256:e30a9da73ffdd6643eee6217ff3a7a0b48a88c9bde358ad2d2e06230d93ebbbf", size = 62326, upload-time = "2026-01-26T15:31:47.086Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/53/173691a9630b32099ef114a29c30df3285c3d0a2f2066304302ff3b428d3/aiida_workgraph-0.8.1-py3-none-any.whl", hash = "sha256:75304b462a0bd5530f13c9df30c7f680654d5ada012f204d7c7d4589c01de6b7", size = 79173, upload-time = "2026-01-26T15:31:45.928Z" },
 ]
 
 [[package]]
@@ -111,7 +107,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiida-core" },
-    { name = "aiida-workgraph" },
+    { name = "aiida-workgraph", git = "https://github.com/aiidateam/aiida-workgraph.git?rev=main" },
     { name = "pytest" },
 ]
 
@@ -851,7 +847,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [

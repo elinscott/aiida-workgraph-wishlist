@@ -7,8 +7,11 @@ name = "aiida-workgraph-wishlist"
 version = "0.0.0"
 description = "Executable MWEs of aiida-workgraph behaviours we have and wish we had."
 requires-python = ">=3.10"
+# Track aiida-workgraph from GitHub main (not the PyPI release) so merged fixes
+# land here as soon as they hit main. uv.lock pins the exact commit; refresh with
+#   uv lock --upgrade-package aiida-workgraph
 dependencies = [
-    "aiida-workgraph",
+    "aiida-workgraph @ git+https://github.com/aiidateam/aiida-workgraph.git@main",
     "aiida-core",
     "pytest",
 ]
