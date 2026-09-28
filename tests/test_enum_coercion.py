@@ -22,6 +22,15 @@ False, so the builder takes its metal branch and every scf and nscf runs
 ``occupations='smearing', smearing='cold', degauss=0.02``. No error, no warning,
 wrong physics; six months of stored calculations before anyone looked.
 
+To be clear about what is being asked for: ``is`` cannot be made to work
+through a proxy. Identity is interpreter-level, and no ``__eq__``-style
+forwarding reaches it. So the wish is not "fix ``is`` on ``TaggedValue``" --
+that is unpatchable on the proxy side. The wish is that a body, and anything
+the body forwards a value to, receives the plain Python value, with the proxy
+resolved at the boundary before third-party code ever sees it. The ``is``
+comparison below is the demonstration of why a proxy escaping into code that
+never opted in is unacceptable, not a defect to be patched where it shows.
+
 Related upstream: scinode/node-graph #152 (``is`` semantics), #176 (what an
 Enum-typed input should receive), #178 (membership decided twice, DRAFT PR),
 #175 (``Literal`` unsupported), aiidateam/aiida-workgraph #800 (DRAFT PR).
@@ -141,7 +150,8 @@ def test_enum_nested_in_a_dict_is_refused(aiida_profile):
     "the eager and the deferred path. `spin == SpinType.COLLINEAR` is True (the "
     "proxy forwards __eq__) but `spin is SpinType.COLLINEAR` is False, so library "
     "code that branches on identity silently takes the wrong branch -- there is no "
-    "error to see. We wish the body received the member. (Escape hatch: "
+    "error to see. No proxy can satisfy `is`, so the fix is not a better proxy: we "
+    "wish the body received the member itself. (Escape hatch: "
     "`SpinType(getattr(spin, 'value', spin))` at every such call site.)"
 )
 def test_graph_body_receives_the_member(aiida_profile):

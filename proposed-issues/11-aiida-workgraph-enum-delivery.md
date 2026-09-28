@@ -54,7 +54,7 @@ top.build(spin=orm.EnumData(SpinType.COLLINEAR)).run()
 
 ## Wish
 
-An `Enum` member passed to a socket should arrive at every body as that member: registered in the serializer registry by base class (aiida-core already has `EnumData`), and deserialized back to the member rather than to a node proxy in a graph body or to its `.value` in a task body.
+Identity is decided by the interpreter, so no proxy can ever make `spin is SpinType.COLLINEAR` true; the fix is not on the proxy but at the boundary: resolve it before the body, or anything the body calls, sees the value. An `Enum` member passed to a socket should arrive at every body as that member: registered in the serializer registry by base class (aiida-core already has `EnumData`), and deserialized back to the member rather than to a node proxy in a graph body or to its `.value` in a task body.
 
 Every observation above was reproduced against aiida-workgraph 0.9.0 (main @ 502c1b5b), node-graph 0.6.5, aiida-pythonjob 0.5.2, aiida-core 2.7.3.
 
