@@ -8,11 +8,14 @@ version = "0.0.0"
 description = "Executable MWEs of aiida-workgraph behaviours we have and wish we had."
 requires-python = ">=3.10"
 # Track aiida-workgraph from GitHub main (not the PyPI release) so merged fixes
-# land here as soon as they hit main. uv.lock pins the exact commit; refresh with
-#   uv lock --upgrade-package aiida-workgraph
+# land here as soon as they hit main, and aiida-core from its GitHub tag. uv.lock
+# pins the exact commits; refresh with
+#   uv lock --upgrade-package aiida-core --upgrade-package aiida-workgraph
 dependencies = [
     "aiida-workgraph @ git+https://github.com/aiidateam/aiida-workgraph.git@main",
-    "aiida-core",
+    # v2.9.1 is the last aiida-core that still depends on plumpy; main has absorbed
+    # it, and aiida-workgraph main still imports plumpy without declaring it.
+    "aiida-core @ git+https://github.com/aiidateam/aiida-core.git@v2.9.1",
     "pytest",
 ]
 
