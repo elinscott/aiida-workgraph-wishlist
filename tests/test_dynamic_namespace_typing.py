@@ -82,7 +82,7 @@ class Bundle(TypedDict):
 
 
 @pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: a TypedDict used as a @task.graph RETURN "
+    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: a TypedDict used as a @task.graph RETURN "
     "annotation does not build a consumable namespace output -- the dynamic field "
     "becomes an opaque `workgraph.dict`, so a downstream namespace consumer fails to "
     "link ('Namespace item type mismatch: ... dict -> ... namespace'). An explicit "
@@ -121,7 +121,7 @@ def test_typeddict_return_annotation_is_consumable(collect):
 
 
 @pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: a gathered dynamic-namespace OUTPUT can be fed to "
+    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: a gathered dynamic-namespace OUTPUT can be fed to "
     "one downstream task, but iterating it in another @task.graph "
     "(`for k, v in gathered.items()`) fails ('TaskSocketNamespace has no sub-socket'). "
     "We wish gather -> re-scatter worked, so a fan-out's results can fan out again."
