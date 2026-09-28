@@ -1,26 +1,23 @@
-"""``from __future__ import annotations`` breaks dynamic namespaces.
+"""``from __future__ import annotations`` and dynamic namespaces.
 
 PEP 563 (the modern default in many codebases -- every aiida-koopmans2 module
 uses it) stringises annotations. The engine reads a dynamic-namespace annotation
-at runtime to build the per-item links; as a string it can't resolve, failing
-with ``name 'Annotated' is not defined`` mid-run. This whole module carries the
-future import so the failure reproduces.
+at runtime to build the per-item links; historically, as a string it could not
+resolve, failing with ``name 'Annotated' is not defined`` mid-run. This whole
+module carries the future import so that path is exercised.
+
+GRANTED: aiida-workgraph #788 (closes #783) resolves the stringised annotation,
+so a dynamic-namespace graph task now runs under PEP 563. Promoted from a wish
+(``xfail``) to a guard.
 """
 
 from __future__ import annotations
 
 from typing import Annotated
 
-import pytest
 from aiida_workgraph import dynamic, namespace, task
 
 
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: with `from __future__ import annotations`, a "
-    "dynamic-namespace hint is a string the engine cannot resolve at runtime "
-    "('name Annotated is not defined'). Dropping the future import fixes it, but "
-    "PEP 563 is the modern default -- we wish stringised annotations were supported."
-)
 def test_dynamic_namespace_works_under_future_annotations(collect):
     @task
     def src() -> Annotated[dict, namespace(data=dynamic(int))]:
