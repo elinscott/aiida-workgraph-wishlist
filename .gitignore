@@ -5,3 +5,4 @@ __pycache__/
 .aiida/
 build/
 dist/
+docs/_build/

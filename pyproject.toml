@@ -19,6 +19,10 @@ dependencies = [
     "pytest",
 ]
 
+[dependency-groups]
+# The meeting page under docs/: `uv run --group docs sphinx-build -W -b html docs docs/_build/html`
+docs = ["sphinx", "sphinx-design", "furo"]
+
 [tool.setuptools]
 # No package to install; this repo is just an executable test suite.
 py-modules = []
