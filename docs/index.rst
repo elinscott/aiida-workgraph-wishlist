@@ -20,7 +20,7 @@ Overarching questions
   - it is the object you handle in a function body.
   We would split those: one class responsible for serialization, and one convenient Python object for interacting with a structure, and only the latter appears in function bodies. See also: ``BandsData``, ``RemoteData``, ``FolderData``, ...
 - How to get Enums working? Singletons go against ``TaggedValue`` design and ``is`` becomes impossible. Serialization also currently gives lots of surprises. *Proposed: member in, member out; a* ``Literal[...]`` *subset of members is enforced by the builder alone, and nothing downstream coerces.*
-- Contracts: to encode all of this, do we need to turn to a pydantic ``input_model`` (:doc:`examples/pydantic`)? (`node-graph #182 <https://github.com/scinode/node-graph/issues/182>`_, `aiida-workgraph #814 <https://github.com/aiidateam/aiida-workgraph/issues/814>`_) *I would hesitate to recommend a full pydantic pivot if the enum-subset contract can be guaranteed.*
+- Contracts: to encode all of this, do we need to turn to a pydantic ``input_model`` (:doc:`examples/pydantic`)? *I would hesitate to recommend a full pydantic pivot if the enum-subset contract can be guaranteed.*
 - Logistics: see section 4.
 
 1. Enums
