@@ -7,6 +7,8 @@ extensions = ["sphinx_design"]
 html_theme = "furo"
 html_title = project
 exclude_patterns = ["_build"]
+html_static_path = ["_static"]
+html_css_files = ["wide.css"]
 
 
 def strip_trailing_blank_lines(app, doctree):
