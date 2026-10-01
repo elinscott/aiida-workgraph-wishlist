@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import pytest
-from aiida_workgraph import task
+from aiida_workgraph import namespace, task
 
 from wishlist_types import Settings
 
@@ -13,14 +15,16 @@ from wishlist_types import Settings
 def test_int_want(aiida_profile):
     @task.graph
     def inner(cfg: Settings) -> int:
-        # today: cfg.nspin arrives as an orm.Int (a plain int when top-level), so range() raises TypeError
-        return len(range(cfg.nspin))  # today: a graph body may not return a plain value
+        return len(range(cfg.nspin))  # today: TypeError once it runs, cfg.nspin arrives as an orm.Int
 
     @task.graph
-    def top(cfg: Settings) -> int:
-        return inner(cfg=cfg).result
+    def top(cfg: Settings) -> Annotated[dict, namespace(eager=int, deferred=int)]:
+        return {
+            "eager": len(range(cfg.nspin)),  # today: 2, a plain int arrives here
+            "deferred": inner(cfg=cfg).result,
+        }
 
-    graph = top.build(cfg=Settings(nspin=2))
-    graph.run()  # today: inner fails, TypeError: 'Int' object cannot be interpreted as an integer
-    assert graph.outputs.result.value == 2  # today: None, inner failed
+    graph = top.build(cfg=Settings(nspin=2))  # today: TypeError: Invalid graph return payload, "eager" is a plain value
+    graph.run()
+    assert (graph.outputs.eager.value, graph.outputs.deferred.value) == (2, 2)
 # end mwe: int-want

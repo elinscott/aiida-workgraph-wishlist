@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import pytest
-from aiida_workgraph import task
+from aiida_workgraph import namespace, task
 
 
 # mwe: dict-want
@@ -11,14 +13,16 @@ from aiida_workgraph import task
 def test_dict_want(aiida_profile):
     @task.graph
     def inner(overrides: dict[str, int]) -> bool:
-        # today: overrides arrives as an orm.Dict (a plain dict when top-level), so this is False
-        return isinstance(overrides, dict)  # today: a graph body may not return a plain value
+        return isinstance(overrides, dict)  # today: False once it runs, overrides arrives as an orm.Dict
 
     @task.graph
-    def top(overrides: dict[str, int]) -> bool:
-        return inner(overrides=overrides).result
+    def top(overrides: dict[str, int]) -> Annotated[dict, namespace(eager=bool, deferred=bool)]:
+        return {
+            "eager": isinstance(overrides, dict),  # today: True, a plain dict arrives here
+            "deferred": inner(overrides=overrides).result,
+        }
 
-    graph = top.build(overrides={"ecutwfc": 40})
+    graph = top.build(overrides={"ecutwfc": 40})  # today: TypeError: Invalid graph return payload, "eager" is a plain value
     graph.run()
-    assert graph.outputs.result.value  # today: None, inner failed
+    assert (graph.outputs.eager.value, graph.outputs.deferred.value) == (True, True)
 # end mwe: dict-want
