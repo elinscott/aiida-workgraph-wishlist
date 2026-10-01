@@ -71,7 +71,7 @@ A ``spin: SpinType`` socket is a generic ``workgraph.annotated`` socket: ``Forei
    :end-before: # end mwe: enum-literal
    :caption: `tests/test_enum_coercion.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_enum_coercion.py>`__
 
-``Literal[SpinType.COLLINEAR, SpinType.NONE]`` constrains nothing: node-graph drops the ``Literal`` to an untyped annotated socket.
+``Literal[SpinType.COLLINEAR, SpinType.NONE]`` constrains nothing from an untyped source, and a ``SpinType`` source cannot link to it at all (``Socket annotated type mismatch``). The want/today pair is on the main page under Type narrowing.
 
 Should start failing once granted
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -53,6 +53,23 @@ A bare member crosses a socket only with a serializer registered per Enum class;
 
 Once granted, ``spin.get_member()`` in a body must raise; the suite pins that.
 
+1.3 Type narrowing
+~~~~~~~~~~~~~~~~~~
+
+ph.x handles two of the three spin regimes. We want to say so on the task's socket and have the builder check it where the member is known; a member that only arrives at run is checked at run by the same rule.
+
+.. literalinclude:: ../tests/test_narrow_want.py
+   :language: python
+   :start-after: # mwe: narrow-want
+   :end-before: # end mwe: narrow-want
+   :caption: `tests/test_narrow_want.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_narrow_want.py>`__
+
+.. literalinclude:: ../tests/test_narrow_today.py
+   :language: python
+   :start-after: # mwe: narrow-today
+   :end-before: # end mwe: narrow-today
+   :caption: `tests/test_narrow_today.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_narrow_today.py>`__
+
 2. Plain Python in bodies
 -------------------------
 

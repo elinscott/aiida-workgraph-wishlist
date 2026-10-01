@@ -9,6 +9,7 @@ from enum import Enum
 class SpinType(Enum):
     NONE = "none"
     COLLINEAR = "collinear"
+    NON_COLLINEAR = "non_collinear"
 
 
 @dataclass
