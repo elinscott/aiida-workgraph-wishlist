@@ -8,19 +8,21 @@ you are in and on which path the graph was invoked:
 
 * in a ``@task`` body a dataclass socket is rebuilt faithfully, ``int`` fields
   and all -> PASS (the guard that makes the next case a defect, not a policy);
-* in a ``@task.graph`` body the same field is a proxy over ``orm.Int``, so
-  ``range(cfg.nspin)`` raises -> WISH;
+* in a ``@task.graph`` body that runs deferred (called from another graph) the
+  same field is a proxy over ``orm.Int``, so ``range(cfg.nspin)`` raises; run
+  eagerly, the body gets a proxy over a plain ``int`` and ``range`` works -> WISH;
 * a ``dict`` input is a proxy over a plain ``dict`` when the body runs eagerly
   and over ``orm.Dict`` when it runs deferred, so ``isinstance(d, dict)``
   answers differently for the same code -> WISH;
 * a ``None``-valued field of a ``TypedDict`` socket is gone on the far side,
-  while a dataclass keeps it -> WISH;
+  with no error -> WISH;
 * and the dataclass escape hatch is itself broken: an ``Optional`` field left at
   its default, or passed explicitly as ``None``, is reported as a *missing
   required input* -> WISH;
 * an ``orm`` node a body needs whole (``SinglefileData``, ``FolderData``) cannot
-  reach a plain ``@task`` at all; only a ``@task.calcfunction`` gets it -> WISH
-  plus its guard.
+  reach a plain ``@task`` unless a deserializer for its type is registered
+  profile-wide in ``pythonjob.json``; per task, only a ``@task.calcfunction``
+  gets it -> WISH plus its guard.
 
 The wish, in one sentence: the body sees the Python types its signature
 declares, on every path, and serialization is the framework's concern.
@@ -156,11 +158,12 @@ def test_task_body_rebuilds_the_dataclass(aiida_profile):
 
 
 @pytest.mark.xfail(
-    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): inside a @task.graph body a "
-    "dataclass socket's `int` field is a TaggedValue over `orm.Int`, which has no "
-    "`__index__`, so `range(cfg.nspin)` raises `TypeError: 'Int' object cannot be "
-    "interpreted as an integer`. A plain @task body gets a real `int` from the same "
-    "socket (see the guard above). We wish an `int` field were an `int` in both. "
+    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): inside a @task.graph body that "
+    "runs deferred (called from another graph) a dataclass socket's `int` field is a "
+    "TaggedValue over `orm.Int`, so `range(cfg.nspin)` raises `TypeError: 'Int' "
+    "object cannot be interpreted as an integer`. The same body run eagerly gets a "
+    "TaggedValue over a plain `int`, and a plain @task body gets a real `int` (see "
+    "the guard above). We wish an `int` field were an `int` on every path. "
     "(Escape hatch: `int(cfg.nspin)` at every use.) Upstream #780."
 )
 def test_graph_body_int_field_is_an_int(aiida_profile):
@@ -229,12 +232,14 @@ def test_dict_input_is_the_same_on_both_paths(aiida_profile):
     reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / aiida-pythonjob 0.5.2: a "
     "`SinglefileData` input to a plain @task fails at run with `ValueError: Cannot "
     "deserialize AiiDA data of type ...SinglefileData. This type does not define a "
-    "`.value` attribute, and no matching deserializer was provided`. Any node whose "
-    "content is not a scalar -- SinglefileData, FolderData, RemoteData -- is "
-    "therefore unreachable from a plain function task. We wish a body could declare "
-    "it wants the node. (Documented escape hatch: make the task a "
-    "@task.calcfunction, which costs a process node and provenance you may not want "
-    "-- see the guard below.) Upstream aiida-pythonjob #78, #83."
+    "`.value` attribute, and no matching deserializer was provided`. `@task` takes "
+    "no `deserializers` option and a call-site `deserializers=` is refused as an "
+    "undefined input, so the only switch is profile-wide: a pass-through entry for "
+    "the type under `deserializers` in `pythonjob.json`, which changes every task in "
+    "the profile. We wish a body could declare it wants the node. (Escape hatches: "
+    "that profile-wide entry, or make the task a @task.calcfunction, which costs a "
+    "process node and provenance you may not want -- see the guard below.) "
+    "Upstream aiida-pythonjob #78, #83."
 )
 def test_plain_task_can_take_a_file_node(aiida_profile):
     @task
@@ -253,7 +258,7 @@ def test_plain_task_can_take_a_file_node(aiida_profile):
 # end mwe: file-node
 
 
-def test_calcfunction_is_the_only_way_to_a_file_node(aiida_profile):
+def test_calcfunction_receives_a_file_node(aiida_profile):
     """GUARD: a ``@task.calcfunction`` receives the real node.
 
     This is why aiida-koopmans2 declares a calcfunction wherever a body needs a
