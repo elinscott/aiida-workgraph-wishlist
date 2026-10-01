@@ -76,7 +76,7 @@ def test_dict_input_echoes_from_an_eager_body(aiida_profile):
     def echo_dict(payload: dict) -> Annotated[dict, namespace(payload=dict)]:
         return {"payload": payload}
 
-    graph = echo_dict.build(payload={"a": 1})
+    graph = echo_dict.build(payload={"a": 1})  # today: TypeError: Invalid graph return payload. - Location: outputs.payload.a - Got: int
     graph.run()
     assert dict(graph.outputs.payload.value) == {"a": 1}
 

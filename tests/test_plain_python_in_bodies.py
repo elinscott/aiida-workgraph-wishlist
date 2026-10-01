@@ -81,7 +81,7 @@ def test_none_field_of_a_typeddict_survives(aiida_profile):
 
     graph = top.build(cfg=SettingsTypedDict(nspin=1, tot_magnetization=None))
     graph.run()
-    assert graph.outputs.result.value
+    assert graph.outputs.result.value  # today: False -- tot_magnetization is absent from cfg on the far side
 
 
 # end mwe: none-typeddict-field
@@ -117,7 +117,7 @@ def test_dataclass_default_is_not_a_missing_input(aiida_profile):
         return leaf(cfg=cfg).result
 
     graph = top.build(cfg=Settings())
-    graph.run()
+    graph.run()  # today: ValueError: Missing required inputs: graph_inputs.cfg.tot_magnetization, leaf.cfg.tot_magnetization
     assert graph.outputs.result.value
 
 
@@ -177,7 +177,7 @@ def test_graph_body_int_field_is_an_int(aiida_profile):
 
     graph = top.build(cfg=Settings(nspin=2, tot_magnetization=1.5))
     graph.run()
-    assert graph.outputs.result.value == 2
+    assert graph.outputs.result.value == 2  # today: None -- inner failed with TypeError: 'Int' object cannot be interpreted as an integer
 
 
 # end mwe: int-field
@@ -216,7 +216,7 @@ def test_dict_input_is_the_same_on_both_paths(aiida_profile):
     graph = top.build(d={"a": 1})
     graph.run()
     assert graph.outputs.eager.value
-    assert graph.outputs.deferred.value
+    assert graph.outputs.deferred.value  # today: False -- isinstance(d, dict) is False on the deferred path (d is orm.Dict there)
 
 
 # end mwe: dict-input
@@ -251,7 +251,7 @@ def test_plain_task_can_take_a_file_node(aiida_profile):
         return leaf(f=f).result
 
     graph = top.build(f=orm.SinglefileData.from_string("hello"))
-    graph.run()
+    graph.run()  # today: ValueError: Cannot deserialize AiiDA data of type ...SinglefileData. This type does not define a `.value` attribute
     assert graph.outputs.result.value == "hello"
 
 

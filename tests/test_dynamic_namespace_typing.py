@@ -111,7 +111,7 @@ def test_typeddict_return_annotation_is_consumable(aiida_profile):
     def top():
         return consume(out=fan(data=numbers().data).out).result
 
-    graph = top.build()
+    graph = top.build()  # today: TypeError: Namespace item type mismatch: fan.out [workgraph.dict] -> consume.out [workgraph.namespace]
     graph.run()
     assert graph.outputs.result.value == 3
 

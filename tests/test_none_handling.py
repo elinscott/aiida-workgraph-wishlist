@@ -42,7 +42,7 @@ def test_none_task_input_is_delivered(aiida_profile):
 
     graph = top.build()
     graph.run()
-    assert graph.outputs.result.value
+    assert graph.outputs.result.value  # today: False -- sink ran with its default "SENTINEL", not None
 
 
 # end mwe: none-kwarg

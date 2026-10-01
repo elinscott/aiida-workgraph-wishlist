@@ -164,7 +164,7 @@ def test_destructure_map_item_without_unpack_task(aiida_profile):
             z.gather({"totals": add(a=z.value["a"], b=z.value["b"]).result})
         return {"totals": z.outputs.totals}
 
-    graph = top.build()
+    graph = top.build()  # today: GraphDeferredIllegalOperationError: Illegal operation on a future value (Socket): subscript access (socket[idx])
     graph.run()
     assert (graph.outputs.totals.k1.value, graph.outputs.totals.k2.value) == (3, 30)
 

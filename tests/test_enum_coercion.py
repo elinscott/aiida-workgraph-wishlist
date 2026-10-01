@@ -86,7 +86,7 @@ def test_enum_member_crosses_a_socket(aiida_profile):
         return leaf(spin=spin).result
 
     graph = top.build(spin=SpinType.COLLINEAR)
-    graph.run()
+    graph.run()  # today: ValueError: Cannot serialize the provided object. Type: test_enum_coercion.SpinType ... not found in provided serializers
     assert graph.outputs.result.value == "SpinType.COLLINEAR"
 
 
@@ -156,7 +156,7 @@ def test_graph_body_receives_the_member(aiida_profile):
     graph = top.build(spin=orm.EnumData(SpinType.COLLINEAR))
     graph.run()
     assert graph.outputs.equal.value  # control: the proxy forwards ==
-    assert (graph.outputs.eager.value, graph.outputs.deferred.value) == ("polarized", "polarized")
+    assert (graph.outputs.eager.value, graph.outputs.deferred.value) == ("polarized", "polarized")  # today: both are "unpolarized" -- third_party took the wrong branch on both paths
 
 
 # end mwe: enum-graph-body
@@ -190,7 +190,7 @@ def test_task_body_receives_the_member(aiida_profile):
 
     graph = top.build(spin=orm.EnumData(SpinType.COLLINEAR))
     graph.run()
-    assert graph.outputs.result.value == "SpinType"
+    assert graph.outputs.result.value == "SpinType"  # today: value is "str" -- the task body got the bare value, not the member
 
 
 # end mwe: enum-task-body
@@ -300,7 +300,7 @@ def test_foreign_member_is_rejected_at_build(aiida_profile):
     def top(spin: SpinType):
         leaf(spin=spin)
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # today: Failed: DID NOT RAISE Exception -- Foreign.COLLINEAR builds and runs
         top.build(spin=orm.EnumData(Foreign.COLLINEAR))
 
 
@@ -335,7 +335,7 @@ def test_literal_narrowing_is_enforced_at_build(aiida_profile):
     def top(spin):
         leaf(spin=spin)
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # today: Failed: DID NOT RAISE Exception -- the Literal narrowing is not enforced
         top.build(spin=orm.EnumData(SpinType.NON_COLLINEAR))
 
 
