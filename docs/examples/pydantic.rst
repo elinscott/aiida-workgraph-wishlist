@@ -5,7 +5,7 @@ A pydantic ``input_model`` as the task contract
 
 So far the philosophy while writing aiida-koopmans against aiida-workgraph has been to make it work given functions annotated with ``TypedDict`` classes and bare ``@task`` and ``@task.graph`` wrappers. The motivating idea: if someone turns up with well-annotated code, converting it to a workgraph should be easy. This has not proven to be the case.
 
-After some conversations with Edan, a pivot to quite a different design is under way: a task's input (and output) contract is a pydantic model, with a minimally annotated function body. Pydantic's validation is a lot richer and can trigger at the right moment.
+After some conversations with Edan, here is an alternative design, drafted but not adopted: a task's input (and output) contract is a pydantic model, with a minimally annotated function body. Pydantic's validation is a lot richer and can trigger at the right moment.
 
 .. code-block:: python
 
@@ -42,4 +42,4 @@ After some conversations with Edan, a pivot to quite a different design is under
 
 Note the failure at build time, not run time. Pydantic also has rich support for serialization and coercion that the ``TypedDict`` strategy cannot match, though this is yet to be exploited.
 
-The two branches are works in progress: the code is mostly unreviewed and the PR descriptions are partly polished AI ramblings.
+I would not advocate strongly for this unless aiida-core itself started using pydantic under the hood. The two branches are works in progress: the code is mostly unreviewed and the PR descriptions are partly polished AI ramblings.
