@@ -1,11 +1,11 @@
 """Eager and deferred bodies: should start failing once the wish is granted."""
 
-# mwe: dict-should-fail
 from __future__ import annotations
 
 from aiida_workgraph import task
 
 
+# mwe: dict-should-fail
 @task
 def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body's value goes through a task
     return x

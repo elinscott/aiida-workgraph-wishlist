@@ -1,11 +1,11 @@
 """Eager and deferred bodies: what we need to write today."""
 
-# mwe: dict-today
 from __future__ import annotations
 
 from aiida_workgraph import task
 
 
+# mwe: dict-today
 @task
 def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body's value goes through a task
     return x

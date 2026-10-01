@@ -1,6 +1,5 @@
 """Plain Python in bodies: what we need to write today."""
 
-# mwe: int-today
 from __future__ import annotations
 
 from aiida_workgraph import task
@@ -8,6 +7,7 @@ from aiida_workgraph import task
 from wishlist_types import Settings
 
 
+# mwe: int-today
 @task
 def as_output(x: int) -> int:  # a graph output must be a socket, so a body's value goes through a task
     return x

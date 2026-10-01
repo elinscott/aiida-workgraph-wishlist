@@ -1,6 +1,5 @@
 """Enums: should start failing once the wish is granted."""
 
-# mwe: enum-should-fail
 from __future__ import annotations
 
 from aiida_workgraph import task
@@ -8,6 +7,7 @@ from aiida_workgraph import task
 from wishlist_types import SpinType
 
 
+# mwe: enum-should-fail
 @task
 def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body's value goes through a task
     return x

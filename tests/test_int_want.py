@@ -1,6 +1,5 @@
 """Plain Python in bodies: what we would like to write."""
 
-# mwe: int-want
 from __future__ import annotations
 
 import pytest
@@ -9,6 +8,7 @@ from aiida_workgraph import task
 from wishlist_types import Settings
 
 
+# mwe: int-want
 @pytest.mark.xfail(reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a deferred graph body gets orm.Int for an int field, and a graph body cannot return a plain value")
 def test_int_want(aiida_profile):
     @task.graph

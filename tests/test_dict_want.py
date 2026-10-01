@@ -1,12 +1,12 @@
 """Eager and deferred bodies: what we would like to write."""
 
-# mwe: dict-want
 from __future__ import annotations
 
 import pytest
 from aiida_workgraph import task
 
 
+# mwe: dict-want
 @pytest.mark.xfail(reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a deferred graph body gets orm.Dict for a dict input, and a graph body cannot return a plain value")
 def test_dict_want(aiida_profile):
     @task.graph

@@ -1,6 +1,5 @@
 """Enums: what we need to write today."""
 
-# mwe: enum-today
 from __future__ import annotations
 
 from aiida_workgraph import task
@@ -8,6 +7,7 @@ from aiida_workgraph import task
 from wishlist_types import SpinType
 
 
+# mwe: enum-today
 @task
 def classify(spin: SpinType) -> str:
     spin = SpinType(spin)  # a task body receives the bare str

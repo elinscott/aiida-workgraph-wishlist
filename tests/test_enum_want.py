@@ -1,6 +1,5 @@
 """Enums: what we would like to write."""
 
-# mwe: enum-want
 from __future__ import annotations
 
 import pytest
@@ -9,6 +8,7 @@ from aiida_workgraph import task
 from wishlist_types import SpinType
 
 
+# mwe: enum-want
 @task
 def classify(spin: SpinType) -> str:
     return "polarized" if spin is SpinType.COLLINEAR else "unpolarized"
