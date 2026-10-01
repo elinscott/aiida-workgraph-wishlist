@@ -26,7 +26,7 @@ Overarching questions
 1. Enums
 --------
 
-An Enum member goes in; a proxy or a ``str`` comes out. Full set: :doc:`examples/enums`.
+A ``SpinType`` socket on a task is a string socket, so the typed graph does not even build; wrapped by hand, a proxy or a ``str`` comes out. Full set: :doc:`examples/enums`.
 
 1.1 What we would like to write
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
