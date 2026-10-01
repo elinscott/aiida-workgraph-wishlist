@@ -13,7 +13,7 @@ A bare member cannot cross a socket
    :end-before: # end mwe: enum-member-socket
    :caption: `tests/test_enum_coercion.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_enum_coercion.py>`__
 
-A bare member builds and then dies at run; inside a ``dict`` it is refused at run, loudly.
+A bare member builds and then dies at run; inside a ``dict`` it is refused at run, loudly. aiida-koopmans pays with an ``aiida.data`` entry point per Enum class, keyed on the class's dotted path.
 
 A graph body gets a proxy, so ``is`` is False
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

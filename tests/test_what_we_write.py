@@ -31,18 +31,18 @@ class SpinType(Enum):
 
 
 @task
-def classify(spin) -> str:
+def classify(spin: SpinType) -> str:
     return "polarized" if spin is SpinType.COLLINEAR else "unpolarized"
 
 
-@pytest.mark.xfail(reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a bare Enum member cannot cross a socket")
+@pytest.mark.xfail(reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a SpinType task input is a string socket, and a bare member cannot cross a socket")
 def test_enum_want(aiida_profile):
     @task.graph
-    def top(spin: SpinType):
+    def top(spin: SpinType) -> str:
         return classify(spin=spin).result
 
-    graph = top.build(spin=SpinType.COLLINEAR)
-    graph.run()  # today: ValueError: Cannot serialize the provided object. Type: ...SpinType
+    graph = top.build(spin=SpinType.COLLINEAR)  # today: TypeError: Socket type mismatch, graph_inputs.spin [SpinType] -> classify.spin [workgraph.string]
+    graph.run()  # and with classify untyped: ValueError: Cannot serialize the provided object. Type: ...SpinType
     assert graph.outputs.result.value == "polarized"
 
 
@@ -56,17 +56,17 @@ class SpinType(Enum):
 
 
 @task
-def classify(spin) -> str:
+def classify(spin: str) -> str:
     return "polarized" if spin == "collinear" else "unpolarized"
 
 
 def test_enum_today(aiida_profile):
     @task.graph
-    def top(spin: SpinType):
-        spin = SpinType(getattr(spin, "value", spin))  # proxy over EnumData -> member
+    def top(spin: SpinType) -> str:
+        spin = SpinType(spin.value)  # proxy over EnumData -> member
         return classify(spin=spin.value).result  # member -> str before it crosses a socket
 
-    graph = top.build(spin=orm.EnumData(SpinType.COLLINEAR))  # a bare member cannot cross a socket
+    graph = top.build(spin=orm.EnumData(SpinType.COLLINEAR))  # a bare member cannot cross a socket; aiida-koopmans registers an aiida.data entry point per Enum class instead
     graph.run()
     assert graph.outputs.result.value == "polarized"
 
@@ -76,7 +76,7 @@ def test_enum_today(aiida_profile):
 
 # mwe: enum-should-fail
 @task
-def seen(x):
+def seen(x: bool) -> bool:
     return x
 
 
@@ -87,11 +87,11 @@ class SpinType(Enum):
 
 def test_enum_should_fail(aiida_profile):
     @task.graph
-    def inner(spin: SpinType):
+    def inner(spin: SpinType) -> bool:
         return seen(x=spin.get_member() is SpinType.COLLINEAR).result
 
     @task.graph
-    def top(spin: SpinType):
+    def top(spin: SpinType) -> bool:
         return inner(spin=spin).result
 
     graph = top.build(spin=orm.EnumData(SpinType.COLLINEAR))
@@ -111,7 +111,7 @@ def test_enum_should_fail(aiida_profile):
 
 # mwe: int-want
 @task
-def seen(x):
+def seen(x: int) -> int:
     return x
 
 
@@ -123,11 +123,11 @@ class Settings:
 @pytest.mark.xfail(reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a deferred graph body gets orm.Int for an int field")
 def test_int_want(aiida_profile):
     @task.graph
-    def inner(cfg: Settings):
+    def inner(cfg: Settings) -> int:
         return seen(x=len(range(cfg.nspin))).result
 
     @task.graph
-    def top(cfg: Settings):
+    def top(cfg: Settings) -> int:
         return inner(cfg=cfg).result
 
     graph = top.build(cfg=Settings(nspin=2))
@@ -140,7 +140,7 @@ def test_int_want(aiida_profile):
 
 # mwe: int-today
 @task
-def seen(x):
+def seen(x: int) -> int:
     return x
 
 
@@ -151,12 +151,12 @@ class Settings:
 
 def test_int_today(aiida_profile):
     @task.graph
-    def inner(cfg: Settings):
+    def inner(cfg: Settings) -> int:
         nspin = int(cfg.nspin)  # orm.Int -> int, or range() fails
         return seen(x=len(range(nspin))).result
 
     @task.graph
-    def top(cfg: Settings):
+    def top(cfg: Settings) -> int:
         return inner(cfg=cfg).result
 
     graph = top.build(cfg=Settings(nspin=2))
@@ -169,7 +169,7 @@ def test_int_today(aiida_profile):
 
 # mwe: int-should-fail
 @task
-def seen(x):
+def seen(x: int) -> int:
     return x
 
 
@@ -180,11 +180,11 @@ class Settings:
 
 def test_int_should_fail(aiida_profile):
     @task.graph
-    def inner(cfg: Settings):
+    def inner(cfg: Settings) -> int:
         return seen(x=cfg.nspin.value).result
 
     @task.graph
-    def top(cfg: Settings):
+    def top(cfg: Settings) -> int:
         return inner(cfg=cfg).result
 
     graph = top.build(cfg=Settings(nspin=2))
@@ -204,18 +204,18 @@ def test_int_should_fail(aiida_profile):
 
 # mwe: dict-want
 @task
-def seen(x):
+def seen(x: bool) -> bool:
     return x
 
 
 @pytest.mark.xfail(reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a deferred graph body gets orm.Dict for a dict input")
 def test_dict_want(aiida_profile):
     @task.graph
-    def inner(overrides: dict):
+    def inner(overrides: dict[str, int]) -> bool:
         return seen(x=isinstance(overrides, dict)).result
 
     @task.graph
-    def top(overrides: dict):
+    def top(overrides: dict[str, int]) -> bool:
         return inner(overrides=overrides).result
 
     graph = top.build(overrides={"ecutwfc": 40})
@@ -228,18 +228,18 @@ def test_dict_want(aiida_profile):
 
 # mwe: dict-today
 @task
-def seen(x):
+def seen(x: bool) -> bool:
     return x
 
 
 def test_dict_today(aiida_profile):
     @task.graph
-    def inner(overrides: dict):
+    def inner(overrides: dict[str, int]) -> bool:
         overrides = dict(overrides)  # proxy over orm.Dict -> dict
         return seen(x=isinstance(overrides, dict)).result
 
     @task.graph
-    def top(overrides: dict):
+    def top(overrides: dict[str, int]) -> bool:
         return inner(overrides=overrides).result
 
     graph = top.build(overrides={"ecutwfc": 40})
@@ -252,17 +252,17 @@ def test_dict_today(aiida_profile):
 
 # mwe: dict-should-fail
 @task
-def seen(x):
+def seen(x: bool) -> bool:
     return x
 
 
 def test_dict_should_fail(aiida_profile):
     @task.graph
-    def inner(overrides: dict):
+    def inner(overrides: dict[str, int]) -> bool:
         return seen(x=overrides.get_dict() == {"ecutwfc": 40}).result
 
     @task.graph
-    def top(overrides: dict):
+    def top(overrides: dict[str, int]) -> bool:
         return inner(overrides=overrides).result
 
     graph = top.build(overrides={"ecutwfc": 40})
