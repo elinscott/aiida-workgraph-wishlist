@@ -37,8 +37,8 @@ class SpinType(Enum):
     COLLINEAR = "collinear"
 
 
-def third_party(spin):
-    """Stand-in for library code that branches on identity, not equality."""
+@task
+def classify(spin) -> str:
     return "polarized" if spin is SpinType.COLLINEAR else "unpolarized"
 
 
@@ -47,15 +47,15 @@ def third_party(spin):
     "a socket at all -- `graph.run()` raises `ValueError: Cannot serialize the "
     "provided object. Type: ...SpinType ... not found in provided serializers`. "
     "This is the code we want: a member in, a member out, with `is` doing the "
-    "right thing for `third_party`."
+    "right thing inside `classify`."
 )
 def test_enum_want(aiida_profile):
     @task.graph
     def top(spin: SpinType):
-        return seen(x=third_party(spin)).result
+        return classify(spin=spin).result
 
     graph = top.build(spin=SpinType.COLLINEAR)
-    graph.run()
+    graph.run()  # today: ValueError: Cannot serialize the provided object. Type: ...SpinType
     assert graph.outputs.result.value == "polarized"
 
 
@@ -68,20 +68,16 @@ class SpinType(Enum):
     COLLINEAR = "collinear"
 
 
-def third_party(spin):
-    """Stand-in for library code that branches on identity, not equality."""
-    return "polarized" if spin is SpinType.COLLINEAR else "unpolarized"
+@task
+def classify(spin) -> str:
+    return "polarized" if spin == "collinear" else "unpolarized"
 
 
 def test_enum_today(aiida_profile):
     @task.graph
-    def inner(spin: SpinType):
-        spin = SpinType(getattr(spin, "value", spin))  # proxy over EnumData -> member
-        return seen(x=third_party(spin)).result
-
-    @task.graph
     def top(spin: SpinType):
-        return inner(spin=spin).result
+        spin = SpinType(getattr(spin, "value", spin))  # proxy over EnumData -> member
+        return classify(spin=spin.value).result  # member -> str: a member cannot cross a socket
 
     graph = top.build(spin=orm.EnumData(SpinType.COLLINEAR))
     graph.run()
@@ -234,7 +230,7 @@ def test_dict_want(aiida_profile):
 def test_dict_today(aiida_profile):
     @task.graph
     def inner(overrides: dict):
-        overrides = dict(overrides)  # proxy over orm.Dict -> dict
+        overrides = dict(overrides.items())  # proxy over orm.Dict -> dict
         return seen(x=isinstance(overrides, dict)).result
 
     @task.graph
