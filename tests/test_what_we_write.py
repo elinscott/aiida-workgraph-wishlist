@@ -56,8 +56,9 @@ class SpinType(Enum):
 
 
 @task
-def classify(spin: str) -> str:
-    return "polarized" if spin == "collinear" else "unpolarized"
+def classify(spin: SpinType) -> str:
+    spin = SpinType(spin)  # a task body receives the bare str
+    return "polarized" if spin is SpinType.COLLINEAR else "unpolarized"
 
 
 def test_enum_today(aiida_profile):
