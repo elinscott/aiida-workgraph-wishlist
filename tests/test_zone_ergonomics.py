@@ -1,8 +1,9 @@
 """Operations on raw *future* sockets (``TaskSocket``) outside a deferred body.
 
-On a raw ``task.outputs`` socket / ``z.item.value`` in a zone body, your value is
-a ``TaskSocket`` (a future). Empirically (aiida-workgraph 0.8.1) the framework
-treats different operations very differently:
+On a raw ``task.outputs`` socket / ``z.value`` in a zone body, your value is a
+``TaskSocket`` (a future). Empirically (aiida-workgraph 0.9.0, upstream main @
+502c1b5b; node-graph 0.6.5) the framework treats different operations very
+differently:
 
 * **arithmetic** (``socket * 2``, ``socket // 2``) is *supported* -- it builds a
   deferred operator task (``op_mul`` / ``op_floordiv``). So the team folklore
@@ -13,6 +14,11 @@ treats different operations very differently:
 
 The asymmetry (arithmetic builds an op task, subscript refuses) is itself worth
 raising with the devs.
+
+GRANTED since the first version of this module: aiida-workgraph #792 (closes
+#785) replaced the ``z.item`` outputs namespace with ``z.value`` and ``z.key``,
+so the item no longer arrives as internal machinery the user has to reach
+through. ``z.item`` survives as a deprecated alias. Promoted to a guard below.
 """
 
 from typing import Annotated
@@ -26,34 +32,51 @@ from aiida_workgraph import Map, dynamic, namespace, task
 # stringised annotations break that with "name 'Annotated' is not defined".
 
 
-@task
-def make_items() -> Annotated[dict, dynamic(dict)]:
-    return {"i1": {"n": 7}, "i2": {"n": 99}}
-
-
 # ----------------------------------------------------------------------
 # These WORK today (regression guards)
 # ----------------------------------------------------------------------
 
 
-def test_socket_arithmetic_builds_operator_tasks(collect):
+# mwe: map-value
+@task
+def make_items() -> Annotated[dict, dynamic(dict)]:
+    return {"i1": {"n": 7}, "i2": {"n": 99}}
+
+
+def test_map_value_is_the_item(aiida_profile):
+    @task
+    def sink(item, key):
+        return f"{key}={item['n']}"
+
+    @task.graph
+    def top() -> Annotated[dict, namespace(seen=dynamic(str))]:
+        with Map(make_items()) as z:
+            z.gather({"seen": sink(item=z.value, key=z.key).result})
+        return {"seen": z.outputs.seen}
+
+    graph = top.build()
+    graph.run()
+    assert (graph.outputs.seen.i1.value, graph.outputs.seen.i2.value) == ("i1=7", "i2=99")
+
+
+# end mwe: map-value
+
+
+def test_socket_arithmetic_builds_operator_tasks(aiida_profile):
     """``socket * 2`` and ``socket // 2`` work -- node-graph builds operator tasks."""
 
     @task
     def make_n() -> int:
         return 21
 
-    @task
-    def sink(mul, floordiv) -> dict:
-        return {"_tag": "arith", "mul": mul, "floordiv": floordiv}
-
     @task.graph
-    def top():
+    def top() -> Annotated[dict, namespace(mul=int, floordiv=int)]:
         n = make_n().result
-        sink(mul=n * 2, floordiv=n // 2)
+        return {"mul": n * 2, "floordiv": n // 2}
 
-    [r] = collect(top, "arith")
-    assert (r["mul"], r["floordiv"]) == (42, 10)
+    graph = top.build()
+    graph.run()
+    assert (graph.outputs.mul.value, graph.outputs.floordiv.value) == (42, 10)
 
 
 def test_eager_subscript_of_future_raises_loudly():
@@ -64,13 +87,13 @@ def test_eager_subscript_of_future_raises_loudly():
     from node_graph.errors import GraphDeferredIllegalOperationError
 
     @task
-    def sink(n) -> dict:
-        return {"_tag": "loud", "n": n}
+    def sink(n):
+        return n
 
     @task.graph
     def top():
         with Map(make_items()) as z:
-            sink(n=z.item.value["n"])  # subscript of a future
+            sink(n=z.value["n"])  # subscript of a future
 
     with pytest.raises(GraphDeferredIllegalOperationError):
         top.build()
@@ -81,90 +104,69 @@ def test_eager_subscript_of_future_raises_loudly():
 # ----------------------------------------------------------------------
 
 
-def test_dynamic_fanout_via_for_loop_is_clean(collect):
-    """The docs' scatter-gather: ``for k, v in data.items()`` in a ``@task.graph``.
-
-    No ``Map`` zone, no ``.value``, no unpack ``@task``. The body is deferred, so
-    ``data`` is concrete: you iterate it and subscript each item inline. This is
-    the documented dynamic fan-out and the clean answer to both Map wishes below
-    -- aiida-koopmans2's Map zones (`unpack_block_item` etc.) are the anti-pattern.
-    """
-
+# mwe: for-loop-fanout
+def test_dynamic_fanout_via_for_loop_is_clean(aiida_profile):
     @task
     def items() -> Annotated[dict, namespace(data=dynamic(dict))]:
         return {"data": {"k1": {"a": 1, "b": 2}, "k2": {"a": 10, "b": 20}}}
 
     @task
-    def combine(a, b) -> dict:
-        return {"_tag": "fanout", "total": int(a) + int(b)}
+    def combine(a, b):
+        return int(a) + int(b)
 
     @task.graph
-    def fan(data: Annotated[dict, dynamic(dict)]):
-        for _key, item in data.items():
-            combine(a=item["a"], b=item["b"])  # subscript inline; no unpack task
+    def fan(data: Annotated[dict, dynamic(dict)]) -> Annotated[dict, namespace(totals=dynamic(int))]:
+        # subscript inline; no unpack task
+        return {"totals": {key: combine(a=item["a"], b=item["b"]).result for key, item in data.items()}}
 
     @task.graph
-    def top():
-        fan(data=items().data)
+    def top() -> Annotated[dict, namespace(totals=dynamic(int))]:
+        return {"totals": fan(data=items().data).totals}
 
-    rs = collect(top, "fanout")
-    assert sorted(r["total"] for r in rs) == [3, 30]
+    graph = top.build()
+    graph.run()
+    assert (graph.outputs.totals.k1.value, graph.outputs.totals.k2.value) == (3, 30)
+
+
+# end mwe: for-loop-fanout
 
 
 # ----------------------------------------------------------------------
-# WISH: IF you use the Map zone, it should be ergonomic (no `.value`, no unpack)
+# WISH: destructuring a Map item should not need an unpack @task
 # ----------------------------------------------------------------------
 
 
+# mwe: map-destructure
 @pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: `Map.item` is the map_item task's OUTPUTS "
-    "namespace (a `key` port and a `value` port), so user code must write "
-    "`z.item.value` to get the item (and `z.item.key` for its key). Passing "
-    "`z.item` directly raises 'link a top-level output socket without a parent'. "
-    "We wish the item were usable directly -- `.value` is internal machinery a "
-    "user should never type. (Documented escape hatch: don't use the Map zone, "
-    "use `for k, v in data.items()` in a @task.graph -- see the guard above.)"
-)
-def test_map_item_usable_without_dot_value(collect):
-    """WISH: ``z.item`` is the item, no ``.value`` ceremony."""
-
-    @task
-    def sink(item) -> dict:
-        return {"_tag": "item_direct", "n": item["n"]}
-
-    @task.graph
-    def top():
-        with Map(make_items()) as z:
-            sink(item=z.item)  # wish: z.item IS the item, not its outputs namespace
-
-    rs = collect(top, "item_direct")
-    assert sorted(r["n"] for r in rs) == [7, 99]
-
-
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: a Map item is a future, so you cannot subscript "
-    "it inline (`z.item.value['a']` raises). Destructuring an N-field item therefore "
+    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: a Map entry "
+    "is a future, so it cannot be subscripted inline -- `z.value['a']` raises "
+    "GraphDeferredIllegalOperationError. Destructuring an N-field item therefore "
     "forces a dedicated unpack @task with one named output per field (see "
     "aiida-koopmans2 `unpack_empty_item` / `unpack_block_item`) -- a per-iteration "
-    "process node and boilerplate that should not be necessary. (Documented escape "
-    "hatch: `for k, v in data.items()` in a @task.graph subscripts inline -- see "
-    "the guard above; the Map zone is the anti-pattern.)"
+    "process node and boilerplate that should not be necessary. Arithmetic on the "
+    "same future builds an operator task, so the refusal is an asymmetry, not a "
+    "limit (scinode/node-graph #156, PR #160). (Documented escape hatch: "
+    "`for k, v in data.items()` in a @task.graph subscripts inline -- see the guard "
+    "above; the Map zone is the anti-pattern.)"
 )
-def test_destructure_map_item_without_unpack_task(collect):
-    """WISH: feed a Map item's fields into a task without a wrapper unpack @task."""
-
+def test_destructure_map_item_without_unpack_task(aiida_profile):
     @task
     def two_field_items() -> Annotated[dict, dynamic(dict)]:
         return {"k1": {"a": 1, "b": 2}, "k2": {"a": 10, "b": 20}}
 
     @task
-    def sink(a, b) -> dict:
-        return {"_tag": "destructure", "total": a + b}
+    def add(a, b):
+        return a + b
 
     @task.graph
-    def top():
+    def top() -> Annotated[dict, namespace(totals=dynamic(int))]:
         with Map(two_field_items()) as z:
-            sink(a=z.item.value["a"], b=z.item.value["b"])
+            z.gather({"totals": add(a=z.value["a"], b=z.value["b"]).result})
+        return {"totals": z.outputs.totals}
 
-    rs = collect(top, "destructure")
-    assert sorted(r["total"] for r in rs) == [3, 30]
+    graph = top.build()  # today: GraphDeferredIllegalOperationError: Illegal operation on a future value (Socket): subscript access (socket[idx])
+    graph.run()
+    assert (graph.outputs.totals.k1.value, graph.outputs.totals.k2.value) == (3, 30)
+
+
+# end mwe: map-destructure

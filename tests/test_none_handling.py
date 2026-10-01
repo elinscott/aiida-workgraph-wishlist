@@ -5,7 +5,9 @@ its per-step inputs as a *frozen dataclass* rather than a ``TypedDict``, because
 dataclass routing (``dataclasses.asdict`` -> ``cls(**value)``) preserves
 ``None`` fields, whereas exploding a dict/TypedDict into a namespace of sockets
 drops the ``None``-valued leaves. Closed-shell tutorial_1
-(``tot_magnetization=None``) hit exactly that.
+(``tot_magnetization=None``) hit exactly that. On aiida-workgraph 0.9.0 the
+dataclass route no longer carries a ``None`` field either: it is reported as a
+missing required input (``test_plain_python_in_bodies.py``, ``dataclass-default``).
 
 The two cases below isolate the rule:
 
@@ -21,28 +23,32 @@ import pytest
 from aiida_workgraph import task
 
 
+# mwe: none-kwarg
 @pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: passing None as a task input argument silently "
-    "drops the socket -- the parameter falls back to its default (or errors with "
-    "'missing argument' if there is none). We wish an explicit None were delivered "
-    "as None, or rejected loudly at build time, rather than silently vanishing."
+    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): passing None as a task input "
+    "argument silently drops the socket -- the parameter falls back to its default "
+    "(or, with no default, raises `ValueError: Missing required inputs`). We wish an "
+    "explicit None were delivered as None, or rejected loudly at build time, rather "
+    "than silently vanishing."
 )
-def test_none_task_input_is_delivered(collect):
-    """WISH: an explicit ``x=None`` reaches the task as ``None``."""
-
+def test_none_task_input_is_delivered(aiida_profile):
     @task
-    def sink(x="SENTINEL") -> dict:
-        return {"_tag": "none_kwarg", "x_is_none": x is None}
+    def sink(x="SENTINEL"):
+        return x is None
 
     @task.graph
     def top():
-        sink(x=None)  # silently dropped today -> x defaults to "SENTINEL"
+        return sink(x=None).result  # silently dropped today -> x defaults to "SENTINEL"
 
-    [r] = collect(top, "none_kwarg")
-    assert r["x_is_none"] is True
+    graph = top.build()
+    graph.run()
+    assert graph.outputs.result.value  # today: False -- sink ran with its default "SENTINEL", not None
 
 
-def test_none_inside_opaque_dict_survives(collect):
+# end mwe: none-kwarg
+
+
+def test_none_inside_opaque_dict_survives(aiida_profile):
     """``None`` carried inside a whole-dict value round-trips intact.
 
     This is the safe path (and why kcp.py's dataclass workaround works): keep the
@@ -54,17 +60,17 @@ def test_none_inside_opaque_dict_survives(collect):
         return {"a": 1, "b": None, "c": "x"}
 
     @task
-    def sink(has_b, b_is_none) -> dict:
-        return {"_tag": "none_dict", "has_b": has_b, "b_is_none": b_is_none}
+    def seen(x):
+        return x
 
     @task.graph
     def inner(d: dict):
-        sink(has_b=("b" in d), b_is_none=(d.get("b") is None))
+        return seen(x="b" in d and d.get("b") is None).result
 
     @task.graph
     def top():
-        inner(d=make().result)
+        return inner(d=make().result).result
 
-    [r] = collect(top, "none_dict")
-    assert r["has_b"] is True
-    assert r["b_is_none"] is True
+    graph = top.build()
+    graph.run()
+    assert graph.outputs.result.value

@@ -2,9 +2,13 @@
 
 A ``@task`` / ``@task.graph`` function name (and any ``name=`` /
 ``call_link_label``) becomes an AiiDA link label, which must match
-``[A-Za-z0-9_]+`` and may not start with ``_``. The pain is *when* you find out:
-not at build time, but silently at runtime -- the offending task simply never
-runs and the workgraph reports success. We wish this were a build-time error.
+``[A-Za-z0-9_]+`` and may not start with ``_``. Historically the pain was *when*
+you found out: not at build time, but silently at runtime -- the offending task
+simply never ran and the workgraph reported success.
+
+GRANTED: aiida-workgraph #787 (closes #784) now validates task names as link
+labels at build time, raising a clear ``ValueError`` with a fix hint. Promoted
+from a wish (``xfail``) to a guard.
 """
 
 from __future__ import annotations
@@ -13,22 +17,18 @@ import pytest
 from aiida_workgraph import task
 
 
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: a leading-underscore @task name is an invalid "
-    "AiiDA link label, but instead of failing at build the task is silently "
-    "skipped and the workgraph reports success. We wish it raised at build time "
-    "(forced renames like dft_n_minus_1, and no _private @task names)."
-)
-def test_underscore_task_name_is_not_silently_skipped(collect):
-    """WISH: a ``_underscore`` task name fails loudly, not silently."""
-
+# mwe: underscore-name
+def test_underscore_task_name_raises_at_build():
     @task
-    def _hidden() -> dict:
-        return {"_tag": "underscore", "ran": True}
+    def _hidden():
+        return True
 
     @task.graph
     def top():
         _hidden()
 
-    rs = collect(top, "underscore")
-    assert rs and rs[0]["ran"] is True
+    with pytest.raises(ValueError, match="cannot start with an underscore"):
+        top.build()
+
+
+# end mwe: underscore-name

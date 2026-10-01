@@ -7,11 +7,26 @@ name = "aiida-workgraph-wishlist"
 version = "0.0.0"
 description = "Executable MWEs of aiida-workgraph behaviours we have and wish we had."
 requires-python = ">=3.10"
+# Track aiida-workgraph from GitHub main (not the PyPI release) so merged fixes
+# land here as soon as they hit main, and aiida-core from its GitHub tag. uv.lock
+# pins the exact commits; refresh with
+#   uv lock --upgrade-package aiida-core --upgrade-package aiida-workgraph
 dependencies = [
-    "aiida-workgraph",
-    "aiida-core",
+    "aiida-workgraph @ git+https://github.com/aiidateam/aiida-workgraph.git@main",
+    # v2.9.1 is the last aiida-core that still depends on plumpy; main has absorbed
+    # it, and aiida-workgraph main still imports plumpy without declaring it.
+    "aiida-core @ git+https://github.com/aiidateam/aiida-core.git@v2.9.1",
     "pytest",
 ]
+
+[project.entry-points."aiida.data"]
+# What a bare Enum member costs today: one serializer entry point per Enum
+# class, keyed on the class's dotted path. aiida-koopmans carries six of these.
+"wishlist.wishlist_types.SpinType" = "aiida.orm.nodes.data.enum:EnumData"
+
+[dependency-groups]
+# The meeting page under docs/: `uv run --group docs sphinx-build -W -b html docs docs/_build/html`
+docs = ["sphinx", "sphinx-design", "furo"]
 
 [tool.setuptools]
 # No package to install; this repo is just an executable test suite.
@@ -23,3 +38,8 @@ testpaths = ["tests"]
 # wish) is a failure under strict markers.
 addopts = "-ra"
 xfail_strict = true
+
+[tool.ruff.lint.per-file-ignores]
+# Each `# mwe:` region in a test module is one docs example and must read on its
+# own, so a definition two regions share is repeated in each, identically.
+"tests/*" = ["F811"]

@@ -5,11 +5,13 @@ fan-outs gather multi-field *namespaces* (e.g. BlockWannierize -> 3 files), and
 there the typing matters in ways the docs don't cover:
 
 * an explicit ``dynamic(namespace(...))`` output IS downstream-consumable (guard);
-* the same shape typed with a ``TypedDict`` (``dynamic(SomeTypedDict)``) is NOT
-  -- it becomes an opaque ``workgraph.dict`` a namespace consumer can't link to
-  (WISH);
-* a gathered namespace can be consumed by a single downstream task, but it cannot
-  be *re-scattered* (iterated in another ``@task.graph`` loop) (WISH).
+* the same shape declared through a ``TypedDict`` RETURN annotation is NOT --
+  its dynamic field becomes an opaque ``workgraph.dict`` a namespace consumer
+  can't link to, while ``dynamic(SomeTypedDict)`` inside an explicit
+  ``namespace(...)`` return links fine (WISH);
+* a gathered namespace re-scatters when it is passed to another ``@task.graph``,
+  whose body iterates it deferred; iterating the future inline in the body that
+  gathered it raises ``TaskSocketNamespace ... has no sub-socket 'items'`` (guard).
 
 This is *why* aiida-koopmans2's Map zones used ``gather()`` -- it explicitly
 builds namespace output specs; the for-loop form needs explicit
@@ -22,6 +24,13 @@ import pytest
 from aiida_workgraph import dynamic, namespace, task
 
 
+# ----------------------------------------------------------------------
+# Guard: explicit dynamic(namespace(...)) gather IS consumable downstream;
+# WISH: a TypedDict-typed dynamic output should be equally consumable
+# ----------------------------------------------------------------------
+
+
+# mwe: typeddict-return
 @task
 def numbers() -> Annotated[dict, namespace(data=dynamic(dict))]:
     return {"data": {"k1": {"a": 1}, "k2": {"a": 2}}}
@@ -34,12 +43,7 @@ def ident(x) -> int:
     return int(x)
 
 
-# ----------------------------------------------------------------------
-# Guard: explicit dynamic(namespace(...)) gather IS consumable downstream
-# ----------------------------------------------------------------------
-
-
-def test_explicit_namespace_gather_is_consumable(collect):
+def test_explicit_namespace_gather_is_consumable(aiida_profile):
     @task.graph
     def one(item) -> Annotated[dict, namespace(a=int)]:
         return {"a": ident(x=item["a"]).result}
@@ -54,20 +58,16 @@ def test_explicit_namespace_gather_is_consumable(collect):
         return {"out": out}
 
     @task
-    def consume(out: Annotated[dict, dynamic(namespace(a=int))]) -> dict:
-        return {"_tag": "explicit_ns", "total": sum(int(v["a"]) for v in out.values())}
+    def consume(out: Annotated[dict, dynamic(namespace(a=int))]) -> int:
+        return sum(int(v["a"]) for v in out.values())
 
     @task.graph
     def top():
-        consume(out=fan(data=numbers().data).out)
+        return consume(out=fan(data=numbers().data).out).result
 
-    [r] = collect(top, "explicit_ns")
-    assert r["total"] == 3
-
-
-# ----------------------------------------------------------------------
-# WISH: a TypedDict-typed dynamic output should be equally consumable
-# ----------------------------------------------------------------------
+    graph = top.build()
+    graph.run()
+    assert graph.outputs.result.value == 3
 
 
 class Item(TypedDict):
@@ -82,7 +82,7 @@ class Bundle(TypedDict):
 
 
 @pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: a TypedDict used as a @task.graph RETURN "
+    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: a TypedDict used as a @task.graph RETURN "
     "annotation does not build a consumable namespace output -- the dynamic field "
     "becomes an opaque `workgraph.dict`, so a downstream namespace consumer fails to "
     "link ('Namespace item type mismatch: ... dict -> ... namespace'). An explicit "
@@ -91,7 +91,7 @@ class Bundle(TypedDict):
     "breaks). We wish TypedDict returns were at parity -- they are the project's "
     "standard data-shape type."
 )
-def test_typeddict_return_annotation_is_consumable(collect):
+def test_typeddict_return_annotation_is_consumable(aiida_profile):
     @task.graph
     def one(item) -> Item:
         return Item(a=ident(x=item["a"]).result)
@@ -104,53 +104,50 @@ def test_typeddict_return_annotation_is_consumable(collect):
         return Bundle(out=out)
 
     @task
-    def consume(out: Annotated[dict, dynamic(Item)]) -> dict:
-        return {"_tag": "td_ret", "total": sum(int(v["a"]) for v in out.values())}
+    def consume(out: Annotated[dict, dynamic(Item)]) -> int:
+        return sum(int(v["a"]) for v in out.values())
 
     @task.graph
     def top():
-        consume(out=fan(data=numbers().data).out)
+        return consume(out=fan(data=numbers().data).out).result
 
-    [r] = collect(top, "td_ret")
-    assert r["total"] == 3
+    graph = top.build()  # today: TypeError: Namespace item type mismatch: fan.out [workgraph.dict] -> consume.out [workgraph.namespace]
+    graph.run()
+    assert graph.outputs.result.value == 3
+
+
+# end mwe: typeddict-return
 
 
 # ----------------------------------------------------------------------
-# WISH: a gathered namespace should be re-scatterable, not just single-consumed
+# Guard: a gathered namespace re-scatters through a nested @task.graph
 # ----------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: a gathered dynamic-namespace OUTPUT can be fed to "
-    "one downstream task, but iterating it in another @task.graph "
-    "(`for k, v in gathered.items()`) fails ('TaskSocketNamespace has no sub-socket'). "
-    "We wish gather -> re-scatter worked, so a fan-out's results can fan out again."
-)
-def test_gather_then_rescatter(collect):
+# mwe: rescatter
+def test_gather_then_rescatter(aiida_profile):
+    @task
+    def scalars() -> Annotated[dict, namespace(data=dynamic(int))]:
+        return {"data": {"k1": 1, "k2": 2}}
+
     @task
     def dbl(v) -> int:
         return int(v) * 2
 
     @task.graph
     def fan(data: Annotated[dict, dynamic(int)]) -> Annotated[dict, namespace(out=dynamic(int))]:
-        out = {}
-        for key, value in data.items():
-            out[key] = dbl(v=value).result
-        return {"out": out}
-
-    @task
-    def rec(v) -> dict:
-        return {"_tag": "rescatter", "v": int(v)}
-
-    @task
-    def scalars() -> Annotated[dict, namespace(data=dynamic(int))]:
-        return {"data": {"k1": 1, "k2": 2}}
+        return {"out": {key: dbl(v=value).result for key, value in data.items()}}
 
     @task.graph
-    def top():
+    def top() -> Annotated[dict, namespace(out=dynamic(int))]:
         gathered = fan(data=scalars().data).out
-        for _key, value in gathered.items():  # re-scatter the gathered namespace
-            rec(v=value)
+        # re-scatter: hand the gathered namespace to a graph whose body iterates
+        # it deferred; `gathered.items()` here, on the future, raises instead
+        return {"out": fan(data=gathered).out}
 
-    rs = collect(top, "rescatter")
-    assert sorted(r["v"] for r in rs) == [2, 4]
+    graph = top.build()
+    graph.run()
+    assert (graph.outputs.out.k1.value, graph.outputs.out.k2.value) == (4, 8)
+
+
+# end mwe: rescatter
