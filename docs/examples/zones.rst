@@ -38,3 +38,4 @@ What works today
 What we want: write the loop you think in.
 
 Proposal: lower ``While`` to the recursive form internally (`aiida-workgraph #738 <https://github.com/aiidateam/aiida-workgraph/issues/738>`__).
+

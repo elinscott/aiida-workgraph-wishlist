@@ -38,6 +38,8 @@ What we want: take a function annotated with ``TypedDict`` and ``dataclass`` typ
 
 What we want: ``None`` is a value like any other. An explicit ``None`` arrives as ``None``, and a field with a default is optional.
 
+Upstream: `aiida-workgraph #779 <https://github.com/aiidateam/aiida-workgraph/issues/779>`__. The same default-means-required shape for pydantic fields: `node-graph #172 <https://github.com/scinode/node-graph/issues/172>`__, with `node-graph #173 <https://github.com/scinode/node-graph/issues/173>`__ and `node-graph #174 <https://github.com/scinode/node-graph/issues/174>`__.
+
 Granted
 ~~~~~~~
 
@@ -51,7 +53,3 @@ Granted
 
    A dynamic-namespace graph now runs in a module with ``from __future__ import annotations``. Granted by `aiida-workgraph #788 <https://github.com/aiidateam/aiida-workgraph/issues/788>`__ (closes `aiida-workgraph #783 <https://github.com/aiidateam/aiida-workgraph/issues/783>`__).
 
-Upstream issues and PRs
-~~~~~~~~~~~~~~~~~~~~~~~
-
-`aiida-workgraph #779 <https://github.com/aiidateam/aiida-workgraph/issues/779>`__. The same default-means-required shape for pydantic fields: `node-graph #172 <https://github.com/scinode/node-graph/issues/172>`__, with `node-graph #173 <https://github.com/scinode/node-graph/issues/173>`__ and `node-graph #174 <https://github.com/scinode/node-graph/issues/174>`__.
