@@ -11,7 +11,8 @@ from aiida_workgraph import task
 def test_dict_want(aiida_profile):
     @task.graph
     def inner(overrides: dict[str, int]) -> bool:
-        return isinstance(overrides, dict)
+        # today: overrides arrives as an orm.Dict (a plain dict when top-level), so this is False
+        return isinstance(overrides, dict)  # today: a graph body may not return a plain value
 
     @task.graph
     def top(overrides: dict[str, int]) -> bool:
@@ -19,5 +20,5 @@ def test_dict_want(aiida_profile):
 
     graph = top.build(overrides={"ecutwfc": 40})
     graph.run()
-    assert graph.outputs.result.value  # today: None, inner failed: a graph body may not return a plain value (and isinstance is False here)
+    assert graph.outputs.result.value  # today: None, inner failed
 # end mwe: dict-want

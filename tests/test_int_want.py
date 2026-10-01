@@ -13,7 +13,8 @@ from wishlist_types import Settings
 def test_int_want(aiida_profile):
     @task.graph
     def inner(cfg: Settings) -> int:
-        return len(range(cfg.nspin))
+        # today: cfg.nspin arrives as an orm.Int (a plain int when top-level), so range() raises TypeError
+        return len(range(cfg.nspin))  # today: a graph body may not return a plain value
 
     @task.graph
     def top(cfg: Settings) -> int:
@@ -21,5 +22,5 @@ def test_int_want(aiida_profile):
 
     graph = top.build(cfg=Settings(nspin=2))
     graph.run()  # today: inner fails, TypeError: 'Int' object cannot be interpreted as an integer
-    assert graph.outputs.result.value == 2  # today: None, inner failed on range(): TypeError: 'Int' object cannot be interpreted as an integer
+    assert graph.outputs.result.value == 2  # today: None, inner failed
 # end mwe: int-want
