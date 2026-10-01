@@ -15,14 +15,14 @@ def as_output(x: int) -> int:  # a graph output must be a socket, so a body's va
 
 def test_int_should_fail(aiida_profile):
     @task.graph
-    def inner(cfg: Settings) -> int:
+    def deferred_graph(cfg: Settings) -> int:
         return as_output(x=cfg.nspin.value).result
 
     @task.graph
-    def top(cfg: Settings) -> int:
-        return inner(cfg=cfg).result
+    def eager_graph(cfg: Settings) -> int:
+        return deferred_graph(cfg=cfg).result
 
-    graph = top.build(cfg=Settings(nspin=2))
+    graph = eager_graph.build(cfg=Settings(nspin=2))
     graph.run()
     assert graph.outputs.result.value == 2
     # today: passes, because cfg.nspin is a proxy over orm.Int, which has .value

@@ -15,14 +15,14 @@ def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body's 
 
 def test_enum_should_fail(aiida_profile):
     @task.graph
-    def inner(spin: SpinType) -> bool:
+    def deferred_graph(spin: SpinType) -> bool:
         return as_output(x=spin.get_member() is SpinType.COLLINEAR).result
 
     @task.graph
-    def top(spin: SpinType) -> bool:
-        return inner(spin=spin).result
+    def eager_graph(spin: SpinType) -> bool:
+        return deferred_graph(spin=spin).result
 
-    graph = top.build(spin=SpinType.COLLINEAR)
+    graph = eager_graph.build(spin=SpinType.COLLINEAR)
     graph.run()
     assert graph.outputs.result.value
     # today: passes, because spin is a proxy over orm.EnumData, which forwards .get_member()

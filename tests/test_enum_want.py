@@ -17,10 +17,10 @@ def classify(spin: SpinType) -> str:
 @pytest.mark.xfail(reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a task body receives an Enum member as its str")
 def test_enum_want(aiida_profile):
     @task.graph
-    def top(spin: SpinType) -> str:
+    def eager_graph(spin: SpinType) -> str:
         return classify(spin=spin).result
 
-    graph = top.build(spin=SpinType.COLLINEAR)
+    graph = eager_graph.build(spin=SpinType.COLLINEAR)
     graph.run()
     assert graph.outputs.result.value == "polarized"  # today: "unpolarized", the task body received the str 'collinear'
 # end mwe: enum-want

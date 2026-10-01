@@ -13,14 +13,14 @@ def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body's 
 
 def test_dict_should_fail(aiida_profile):
     @task.graph
-    def inner(overrides: dict[str, int]) -> bool:
+    def deferred_graph(overrides: dict[str, int]) -> bool:
         return as_output(x=overrides.get_dict() == {"ecutwfc": 40}).result
 
     @task.graph
-    def top(overrides: dict[str, int]) -> bool:
-        return inner(overrides=overrides).result
+    def eager_graph(overrides: dict[str, int]) -> bool:
+        return deferred_graph(overrides=overrides).result
 
-    graph = top.build(overrides={"ecutwfc": 40})
+    graph = eager_graph.build(overrides={"ecutwfc": 40})
     graph.run()
     assert graph.outputs.result.value
     # today: passes, because overrides is a proxy over orm.Dict, which has .get_dict()

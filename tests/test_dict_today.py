@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from aiida_workgraph import task
+from typing import Annotated
+
+from aiida_workgraph import namespace, task
 
 
 # mwe: dict-today
@@ -13,15 +15,18 @@ def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body's 
 
 def test_dict_today(aiida_profile):
     @task.graph
-    def inner(overrides: dict[str, int]) -> bool:
+    def deferred_graph(overrides: dict[str, int]) -> bool:
         overrides = dict(overrides)  # proxy over orm.Dict -> dict
         return as_output(x=isinstance(overrides, dict)).result
 
     @task.graph
-    def top(overrides: dict[str, int]) -> bool:
-        return inner(overrides=overrides).result
+    def eager_graph(overrides: dict[str, int]) -> Annotated[dict, namespace(eager=bool, deferred=bool)]:
+        return {
+            "eager": as_output(x=isinstance(overrides, dict)).result,  # a plain dict here; no coercion needed
+            "deferred": deferred_graph(overrides=overrides).result,
+        }
 
-    graph = top.build(overrides={"ecutwfc": 40})
+    graph = eager_graph.build(overrides={"ecutwfc": 40})
     graph.run()
-    assert graph.outputs.result.value
+    assert (graph.outputs.eager.value, graph.outputs.deferred.value) == (True, True)
 # end mwe: dict-today
