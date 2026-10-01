@@ -1,5 +1,5 @@
-The serialization you can test is not the one that runs (design)
-================================================================
+The serialization you can test is not the one that runs
+=======================================================
 
 ``to_dict()`` returns live objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

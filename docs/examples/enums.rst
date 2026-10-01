@@ -1,5 +1,5 @@
-Use Enums normally (design)
-===========================
+Use Enums normally
+==================
 
 Delivery
 ~~~~~~~~
@@ -16,7 +16,7 @@ A bare member cannot cross a socket
 A bare member builds and then dies at run; inside a ``dict`` it is refused at run, loudly. aiida-koopmans pays with an ``aiida.data`` entry point per ``Enum`` class, keyed on the class's dotted path.
 
 A graph body gets a proxy, so ``is`` is False
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **Issue** `node-graph #152 <https://github.com/scinode/node-graph/issues/152>`__
 
@@ -84,7 +84,7 @@ A ``spin: SpinType`` socket is a generic ``workgraph.annotated`` socket: ``Forei
 Should start failing once granted
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. dropdown:: ``.get_member()`` on an Enum input works (guard; must start failing once granted)
+.. dropdown:: ``.get_member()`` on an ``Enum`` input works
 
    .. literalinclude:: ../../tests/test_enum_should_fail.py
       :language: python

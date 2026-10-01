@@ -1,5 +1,5 @@
-Zones versus native control flow (design)
-=========================================
+Zones versus native control flow
+================================
 
 Loop state needs ``ctx``; the natural spelling is silently wrong
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -15,7 +15,7 @@ Written naturally, a ``While`` loop runs to ``max_iterations`` on a frozen value
 What works today
 ~~~~~~~~~~~~~~~~
 
-.. dropdown:: A ``for`` loop in a graph body fans out with no unpack task (guard)
+.. dropdown:: A ``for`` loop in a graph body fans out with no unpack task
 
    .. literalinclude:: ../../tests/test_zone_ergonomics.py
       :language: python
@@ -25,7 +25,7 @@ What works today
 
    ``for k, v in data.items()`` in a graph body fans out with no unpack task.
 
-.. dropdown:: ``z.value`` is the ``Map`` entry and ``z.key`` its key (granted)
+.. dropdown:: ``z.value`` is the ``Map`` entry and ``z.key`` its key
 
    .. literalinclude:: ../../tests/test_zone_ergonomics.py
       :language: python

@@ -1,5 +1,5 @@
-No ORM objects floating around (design)
-=======================================
+No ORM objects floating around
+==============================
 
 ``int`` is an ``int``, ``dict`` is a ``dict``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -18,7 +18,7 @@ A ``dataclass`` ``int`` field is an ``orm.Int`` in a graph body
 In a ``@task.graph`` body that runs deferred, a ``dataclass`` ``int`` field is a proxy over ``orm.Int``; run eagerly it is a plain ``int`` under the proxy. A ``@task`` body gets a real ``int`` from the same socket.
 
 A ``dict`` input is a ``dict`` eagerly and an ``orm.Dict`` deferred
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **PR** `node-graph #177 <https://github.com/scinode/node-graph/pull/177>`__
 
@@ -46,7 +46,7 @@ In a deferred body a scalar input is a proxy over ``orm.Str``, so you reach thro
 What already works in a deferred body
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. dropdown:: Subscript, ``if`` and ``is None`` see the concrete value in a deferred body (guards)
+.. dropdown:: Subscript, ``if`` and ``is None`` see the concrete value in a deferred body
 
    .. literalinclude:: ../../tests/test_graph_body_values.py
       :language: python
@@ -74,7 +74,7 @@ What we want: a body sees the Python types its signature declares, on every path
 Should start failing once granted
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. dropdown:: ``.value`` on an ``int`` field works (guard; must start failing once granted)
+.. dropdown:: ``.value`` on an ``int`` field works
 
    .. literalinclude:: ../../tests/test_int_should_fail.py
       :language: python
@@ -82,7 +82,7 @@ Should start failing once granted
       :end-before: # end mwe: int-should-fail
       :caption: `tests/test_int_should_fail.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_int_should_fail.py>`__
 
-.. dropdown:: ``.get_dict()`` on a ``dict`` input works (guard; must start failing once granted)
+.. dropdown:: ``.get_dict()`` on a ``dict`` input works
 
    .. literalinclude:: ../../tests/test_dict_should_fail.py
       :language: python

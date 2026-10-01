@@ -1,5 +1,5 @@
-A graph cannot echo its own input (design)
-==========================================
+A graph cannot echo its own input
+=================================
 
 Echoing a ``dict`` input fails eagerly and works deferred
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
