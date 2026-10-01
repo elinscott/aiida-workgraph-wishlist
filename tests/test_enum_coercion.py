@@ -7,7 +7,7 @@ members from its own inputs down to their builders. Empirically (aiida-workgraph
 write the member and read the member back:
 
 * a bare member as a socket value cannot be serialized at all -> WISH;
-* nested inside a ``dict`` input it is refused at build -> PASS (loud, good);
+* nested inside a ``dict`` input it is refused at run -> PASS (loud, good);
 * wrapped by hand in ``orm.EnumData`` it crosses, and then a ``@task.graph``
   body sees a proxy over the node while a ``@task`` body sees a bare ``str``
   -> two WISHes;
@@ -146,11 +146,16 @@ def test_graph_body_receives_the_member(aiida_profile):
         return seen(x=third_party(spin)).result
 
     @task.graph
-    def top(spin: SpinType) -> Annotated[dict, namespace(eager=str, deferred=str)]:
-        return {"eager": seen(x=third_party(spin)).result, "deferred": inner(spin=spin).result}
+    def top(spin: SpinType) -> Annotated[dict, namespace(equal=bool, eager=str, deferred=str)]:
+        return {
+            "equal": seen(x=spin == SpinType.COLLINEAR).result,
+            "eager": seen(x=third_party(spin)).result,
+            "deferred": inner(spin=spin).result,
+        }
 
     graph = top.build(spin=orm.EnumData(SpinType.COLLINEAR))
     graph.run()
+    assert graph.outputs.equal.value  # control: the proxy forwards ==
     assert (graph.outputs.eager.value, graph.outputs.deferred.value) == ("polarized", "polarized")
 
 

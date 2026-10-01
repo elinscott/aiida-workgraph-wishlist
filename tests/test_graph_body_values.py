@@ -1,25 +1,20 @@
 """What a *deferred* ``@task.graph`` body actually sees.
 
 When a ``@task.graph`` is invoked as a node (not the top-level definition), its
-body runs at *runtime* via ``node_graph.utils.graph.materialize_graph``, which
-hands the body its inputs as ``TaggedValue`` proxies wrapping the concrete,
-resolved values. Empirically (aiida-workgraph 0.8.1):
+body runs at *runtime* and receives its inputs as ``TaggedValue`` proxies.
+Empirically (aiida-workgraph 0.9.0, upstream main @ 502c1b5b; node-graph 0.6.5)
+a ``dict`` input is a proxy over ``orm.Dict``, and subscripting it returns plain
+Python values (an ``int``, a ``str``, ``None``). So subscript, a structural
+``if`` on a subscripted value, and ``is None`` all see the real per-invocation
+value -> PASS (regression guards).
 
-* subscript, ``==`` (incl. against an Enum), structural branching, and even
-  ``is None`` all see the real per-invocation value -> PASS (regression guards);
-* ``is`` against a non-None object (e.g. an Enum member) is the one silent
-  footgun -> WISH (``xfail``).
-
-That ``is None`` works but ``is <enum>`` does not is the key subtlety: None
-arrives unwrapped, but other values arrive as a ``wrapt.ObjectProxy`` whose
-identity is the proxy's, not the wrapped object's.
+An Enum member does not survive this way: see ``test_enum_coercion.py``
+(``enum-graph-body``) for a member that arrives as a proxy, where ``==`` is True
+and ``is`` is False.
 """
 
 from __future__ import annotations
 
-from enum import Enum
-
-import pytest
 from aiida_workgraph import task
 
 
@@ -29,11 +24,6 @@ from aiida_workgraph import task
 
 
 # mwe: deferred-body-values
-class Kind(str, Enum):
-    A = "a"
-    B = "b"
-
-
 @task
 def make_block() -> dict:
     return {"n": 7, "kind": "a", "opt": None}
@@ -69,7 +59,7 @@ def test_structural_branch_in_deferred_body(aiida_profile):
 
     @task.graph
     def inner(block: dict):
-        if block["kind"] == Kind.A:
+        if block["kind"] == "a":
             return took_a().result
         return took_b().result
 
@@ -97,49 +87,3 @@ def test_is_none_works_in_deferred_body(aiida_profile):
 
 
 # end mwe: deferred-body-values
-
-
-def test_eq_against_enum_in_deferred_body(aiida_profile):
-    """``==`` against an Enum member works (the proxy forwards ``__eq__``)."""
-
-    @task.graph
-    def inner(block: dict):
-        return seen(x=block["kind"] == Kind.A).result
-
-    @task.graph
-    def top():
-        return inner(block=make_block().result).result
-
-    graph = top.build()
-    graph.run()
-    assert graph.outputs.result.value
-
-
-# ----------------------------------------------------------------------
-# WISH: ``is`` against a non-None object is silently wrong
-# ----------------------------------------------------------------------
-
-
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.8.1: a non-None graph input arrives as a wrapt "
-    "ObjectProxy (TaggedValue); `value is EnumMember` compares the proxy's "
-    "identity, not the wrapped value, so it is silently False. `==` works; only "
-    "`is` is affected. We wish `is` either matched the wrapped value or refused "
-    "to compile (it cannot be detected at runtime)."
-)
-def test_is_against_enum_in_deferred_body(aiida_profile):
-    """We wish ``block['kind'] is Kind.A`` were not silently False."""
-
-    @task.graph
-    def inner(block: dict):
-        # The wrapped value equals Kind.A (== is True), but the proxy is a
-        # distinct object, so `is` is False.
-        return seen(x=block["kind"] is Kind.A).result
-
-    @task.graph
-    def top():
-        return inner(block=make_block().result).result
-
-    graph = top.build()
-    graph.run()
-    assert graph.outputs.result.value
