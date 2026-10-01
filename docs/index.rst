@@ -20,7 +20,7 @@ Overarching questions
   - it is the object you handle in a function body.
   We would split those: one class responsible for serialization, and one convenient Python object for interacting with a structure, and only the latter appears in function bodies. See also: ``BandsData``, ``RemoteData``, ``FolderData``, ...
 - How to get Enums working? Singletons go against ``TaggedValue`` design and ``is`` becomes impossible. Serialization also currently gives lots of surprises. *Proposed: member in, member out; a* ``Literal[...]`` *subset of members is enforced by the builder alone, and nothing downstream coerces.*
-- Contracts: to encode all of this, do we need to turn to a pydantic ``input_model``? (`node-graph #182 <https://github.com/scinode/node-graph/issues/182>`_, `aiida-workgraph #814 <https://github.com/aiidateam/aiida-workgraph/issues/814>`_) *I would hesitate to recommend a full pydantic pivot if the enum-subset contract can be guaranteed.*
+- Contracts: to encode all of this, do we need to turn to a pydantic ``input_model`` (:doc:`examples/pydantic`)? (`node-graph #182 <https://github.com/scinode/node-graph/issues/182>`_, `aiida-workgraph #814 <https://github.com/aiidateam/aiida-workgraph/issues/814>`_) *I would hesitate to recommend a full pydantic pivot if the enum-subset contract can be guaranteed.*
 - Logistics: see section 4.
 
 1. Enums
@@ -130,10 +130,8 @@ Once granted, ``overrides.get_dict()`` in a body must raise; the suite pins that
 
 Where we stand: this suite runs aiida-workgraph main (0.9.0) and node-graph 0.6.5 on aiida-core v2.9.1, the last release that still ships plumpy; aiida-core main has absorbed plumpy and aiida-workgraph main still imports it, so the two mains do not install together. aiida-koopmans runs a patched aiida-workgraph fork on a patched aiida-core fork.
 
-- Which code should I write against, and for how long: aiida-workgraph and node-graph as they are, or the aiida-core integration?
-- Where do these wishes go: issues and PRs on aiida-workgraph and node-graph, or on the integration branch? A PR against a branch I did not write and cannot easily read is a hard ask.
-- Will the integration settle the body contract (sections 1–3) by design, or carry the proxy over as it is?
-- When can aiida-koopmans drop its forks and pin a release?
+- Which code should I write against?
+- Where do these wishes go?
 
 Everything else
 ---------------
@@ -158,4 +156,5 @@ Every example is a test in ``tests/``; :doc:`how-to-run` runs them and builds th
    examples/zones
    examples/feature-requests
    examples/bugs
+   examples/pydantic
    how-to-run
