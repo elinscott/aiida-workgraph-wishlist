@@ -73,6 +73,17 @@ A ``spin: SpinType`` socket is a generic ``workgraph.annotated`` socket: ``Forei
 
 ``Literal[SpinType.COLLINEAR, SpinType.NONE]`` constrains nothing: node-graph drops the ``Literal`` to an untyped annotated socket.
 
+Should start failing once granted
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. dropdown:: ``.get_member()`` on an Enum input works (guard; must start failing once granted)
+
+   .. literalinclude:: ../../tests/test_what_we_write.py
+      :language: python
+      :start-after: # mwe: enum-should-fail
+      :end-before: # end mwe: enum-should-fail
+      :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+
 What we want: the member goes in and the member comes out, on every path.
 
 What it cost us: aiida-quantumespresso branches on ``electronic_type is ElectronicType.INSULATOR``; forwarded from a graph body that was False, and every scf and nscf ran with cold smearing for six months, with no error.

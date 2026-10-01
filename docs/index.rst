@@ -46,14 +46,7 @@ An Enum member goes in; a proxy or a ``str`` comes out. Full set: :doc:`examples
    :end-before: # end mwe: enum-today
    :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
 
-1.3 What works today and should not
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. literalinclude:: ../tests/test_what_we_write.py
-   :language: python
-   :start-after: # mwe: enum-should-fail
-   :end-before: # end mwe: enum-should-fail
-   :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+Once granted, ``spin.get_member()`` in a body must raise; the suite pins that.
 
 2. Plain Python in bodies
 -------------------------
@@ -78,14 +71,7 @@ An ``int`` declared in the signature arrives as ``orm.Int`` inside a deferred gr
    :end-before: # end mwe: int-today
    :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
 
-2.3 What works today and should not
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. literalinclude:: ../tests/test_what_we_write.py
-   :language: python
-   :start-after: # mwe: int-should-fail
-   :end-before: # end mwe: int-should-fail
-   :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+Once granted, ``cfg.nspin.value`` in a body must raise; the suite pins that.
 
 3. Eager and deferred bodies
 ----------------------------
@@ -110,14 +96,7 @@ The same body sees a ``dict`` at top level and an ``orm.Dict`` when nested; whic
    :end-before: # end mwe: dict-today
    :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
 
-3.3 What works today and should not
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. literalinclude:: ../tests/test_what_we_write.py
-   :language: python
-   :start-after: # mwe: dict-should-fail
-   :end-before: # end mwe: dict-should-fail
-   :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+Once granted, ``overrides.get_dict()`` in a body must raise; the suite pins that.
 
 Everything else
 ---------------
