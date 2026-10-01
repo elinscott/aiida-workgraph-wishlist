@@ -1,4 +1,5 @@
 /* Use the browser width: furo caps the content column at 46em. */
-.content { width: 100%; max-width: none; }
+.content { flex: 1 1 auto; width: auto; max-width: none; min-width: 0; }
 article[role="main"] { max-width: none; }
-.sidebar-drawer { width: 16em; }
+.sidebar-drawer { width: 16em; flex: 0 0 16em; }
+.toc-drawer { flex: 0 0 15em; }
