@@ -1,8 +1,8 @@
 Feature requests
 ================
 
-A TypedDict return annotation builds the same sockets as ``namespace(...)``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A ``TypedDict`` return annotation builds the same sockets as ``namespace(...)``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. literalinclude:: ../../tests/test_dynamic_namespace_typing.py
    :language: python
@@ -10,9 +10,9 @@ A TypedDict return annotation builds the same sockets as ``namespace(...)``
    :end-before: # end mwe: typeddict-return
    :caption: `tests/test_dynamic_namespace_typing.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_dynamic_namespace_typing.py>`__
 
-A TypedDict return annotation yields an opaque ``workgraph.dict``; the same shape spelled with ``namespace(...)`` links fine.
+A ``TypedDict`` return annotation yields an opaque ``workgraph.dict``; the same shape spelled with ``namespace(...)`` links fine.
 
-What we want: a TypedDict should build the same sockets as the explicit ``namespace(...)`` spelling.
+What we want: a ``TypedDict`` should build the same sockets as the explicit ``namespace(...)`` spelling.
 
 Upstream: `node-graph #154 <https://github.com/scinode/node-graph/issues/154>`__ and `node-graph #159 <https://github.com/scinode/node-graph/issues/159>`__.
 

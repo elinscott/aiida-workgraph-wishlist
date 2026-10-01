@@ -1,7 +1,7 @@
 Start from annotated Python, change as little as possible (design)
 ==================================================================
 
-What we want: take a function annotated with TypedDicts and dataclasses, put ``@task`` or ``@task.graph`` on it, and have it work.
+What we want: take a function annotated with ``TypedDict`` and ``dataclass`` types, put ``@task`` or ``@task.graph`` on it, and have it work.
 
 ``None`` is a value
 ~~~~~~~~~~~~~~~~~~~
@@ -14,7 +14,7 @@ What we want: take a function annotated with TypedDicts and dataclasses, put ``@
       :end-before: # end mwe: none-typeddict-field
       :caption: `tests/test_plain_python_in_bodies.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_plain_python_in_bodies.py>`__
 
-   A ``None``-valued TypedDict field is gone on the far side.
+   A ``None``-valued ``TypedDict`` field is gone on the far side.
 
 .. dropdown:: An explicit ``x=None`` task argument is dropped (wish)
 
@@ -34,7 +34,7 @@ What we want: take a function annotated with TypedDicts and dataclasses, put ``@
       :end-before: # end mwe: dataclass-default
       :caption: `tests/test_plain_python_in_bodies.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_plain_python_in_bodies.py>`__
 
-   A bug, shown because it closes the dataclass escape: a field left at its ``None`` default, or passed ``None``, is reported as a missing required input.
+   A bug, shown because it closes the ``dataclass`` escape: a field left at its ``None`` default, or passed ``None``, is reported as a missing required input.
 
 What we want: ``None`` is a value like any other. An explicit ``None`` arrives as ``None``, and a field with a default is optional.
 

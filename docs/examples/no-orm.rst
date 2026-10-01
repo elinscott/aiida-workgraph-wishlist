@@ -4,8 +4,8 @@ No ORM objects floating around (design)
 ``int`` is an ``int``, ``dict`` is a ``dict``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A dataclass ``int`` field is an ``orm.Int`` in a graph body
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A ``dataclass`` ``int`` field is an ``orm.Int`` in a graph body
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. literalinclude:: ../../tests/test_plain_python_in_bodies.py
    :language: python
@@ -13,7 +13,7 @@ A dataclass ``int`` field is an ``orm.Int`` in a graph body
    :end-before: # end mwe: int-field
    :caption: `tests/test_plain_python_in_bodies.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_plain_python_in_bodies.py>`__
 
-In a ``@task.graph`` body that runs deferred, a dataclass ``int`` field is a proxy over ``orm.Int``; run eagerly it is a plain ``int`` under the proxy. A ``@task`` body gets a real ``int`` from the same socket.
+In a ``@task.graph`` body that runs deferred, a ``dataclass`` ``int`` field is a proxy over ``orm.Int``; run eagerly it is a plain ``int`` under the proxy. A ``@task`` body gets a real ``int`` from the same socket.
 
 A ``dict`` input is a ``dict`` eagerly and an ``orm.Dict`` deferred
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -89,7 +89,7 @@ In the wild
 
 aiida-koopmans carries these today:
 
-- Recovering an Enum member from a proxy or its bare value: `workgraphs/__init__.py#L35 <https://github.com/elinscott/aiida-koopmans/blob/main/src/aiida_koopmans/workgraphs/__init__.py#L35>`__.
+- Recovering an ``Enum`` member from a proxy or its bare value: `workgraphs/__init__.py#L35 <https://github.com/elinscott/aiida-koopmans/blob/main/src/aiida_koopmans/workgraphs/__init__.py#L35>`__.
 - Rebuilding a namelist override by iterating ``.items()`` rather than trusting ``dict(proxy)``: `workgraphs/dfpt.py#L293 <https://github.com/elinscott/aiida-koopmans/blob/main/src/aiida_koopmans/workgraphs/dfpt.py#L293>`__.
 - Unwrapping a proxied flag to a plain ``bool`` before it is stored: `workgraphs/dfpt.py#L725 <https://github.com/elinscott/aiida-koopmans/blob/main/src/aiida_koopmans/workgraphs/dfpt.py#L725>`__.
 - Coercing a proxied numeric field to ``int``/``float`` before arithmetic: `workgraphs/auto_wannierize.py#L203 <https://github.com/elinscott/aiida-koopmans/blob/main/src/aiida_koopmans/workgraphs/auto_wannierize.py#L203>`__.

@@ -3,7 +3,7 @@ aiida-workgraph wishlist
 
 What I want:
 
-- starting with plain, well-annotated Python (TypedDicts, dataclasses, Enums)
+- starting with plain, well-annotated Python (``TypedDict``, ``dataclass``, ``Enum``)
 - wrap with ``@task`` or ``@task.graph`` (ideally without any wrapper args)
 - and have it work out-of-the-box.
 
@@ -19,14 +19,14 @@ Overarching questions
   - it is the stored, serializable record
   - it is the object you handle in a function body.
   We would split those: one class responsible for serialization, and one convenient Python object for interacting with a structure, and only the latter appears in function bodies. See also: ``BandsData``, ``RemoteData``, ``FolderData``, ...
-- How to get Enums working? Singletons go against TaggedValue design and ``is`` becomes impossible. Serialization also currently gives lots of surprises. *Proposed: member in, member out; a* ``Literal[...]`` *subset of members is enforced by the builder alone, and nothing downstream coerces.*
+- How to get Enums working? Singletons go against ``TaggedValue`` design and ``is`` becomes impossible. Serialization also currently gives lots of surprises. *Proposed: member in, member out; a* ``Literal[...]`` *subset of members is enforced by the builder alone, and nothing downstream coerces.*
 - Contracts: to encode all of this, do we need to turn to a pydantic ``input_model``? (`node-graph #182 <https://github.com/scinode/node-graph/issues/182>`_, `aiida-workgraph #814 <https://github.com/aiidateam/aiida-workgraph/issues/814>`_) *I would hesitate to recommend a full pydantic pivot if the enum-subset contract can be guaranteed.*
 - Logistics: which code should I be writing against, and where do bugs and PRs go, especially now that aiida-workgraph and node-graph are no longer compatible with aiida-core?
 
 1. Enums
 --------
 
-A bare member crosses a socket only with a serializer registered per Enum class; a graph body then sees a proxy and a task body a ``str``. Full set: :doc:`examples/enums`.
+A bare member crosses a socket only with a serializer registered per ``Enum`` class; a graph body then sees a proxy and a task body a ``str``. Full set: :doc:`examples/enums`.
 
 .. literalinclude:: ../tests/wishlist_types.py
    :language: python
@@ -128,7 +128,7 @@ Once granted, ``overrides.get_dict()`` in a body must raise; the suite pins that
 Everything else
 ---------------
 
-- :doc:`examples/annotated-python` — ``None`` and TypedDict fields go missing
+- :doc:`examples/annotated-python` — ``None`` and ``TypedDict`` fields go missing
 - :doc:`examples/echo-input` — a graph cannot return its own input
 - :doc:`examples/two-serializations` — the serialization you can test is not the one that runs
 - :doc:`examples/zones` — ``While`` state must go through ``ctx``

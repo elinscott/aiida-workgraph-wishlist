@@ -11,4 +11,4 @@ Bugs
 
    A ``_hidden`` task name now fails at build with a clear message instead of silently not running. Granted by `aiida-workgraph #787 <https://github.com/aiidateam/aiida-workgraph/issues/787>`__ (closes `aiida-workgraph #784 <https://github.com/aiidateam/aiida-workgraph/issues/784>`__).
 
-The dataclass default reported as a missing input is listed in :doc:`annotated-python`, where it matters. See ``tests/test_plain_python_in_bodies.py::test_dataclass_default_is_not_a_missing_input`` (wish).
+The ``dataclass`` default reported as a missing input is listed in :doc:`annotated-python`, where it matters. See ``tests/test_plain_python_in_bodies.py::test_dataclass_default_is_not_a_missing_input`` (wish).

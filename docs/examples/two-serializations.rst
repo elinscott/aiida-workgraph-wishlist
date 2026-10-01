@@ -10,7 +10,7 @@ The serialization you can test is not the one that runs (design)
    :end-before: # end mwe: to-dict-live
    :caption: `tests/test_two_serialization_paths.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_two_serialization_paths.py>`__
 
-The input comes back as the same object, so the dict is JSON-encodable only when every input is; with the Enum member in it, ``json.dumps`` raises ``TypeError``.
+The input comes back as the same object, so the dict is JSON-encodable only when every input is; with the ``Enum`` member in it, ``json.dumps`` raises ``TypeError``.
 
 A graph that round-trips can still die at run
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
