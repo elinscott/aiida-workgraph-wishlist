@@ -36,4 +36,3 @@ The daemon's checkpoint path can be driven in-process, from four undocumented pi
 
 What we want: one serialization, the engine's, reachable from a test.
 
-Upstream: none yet.

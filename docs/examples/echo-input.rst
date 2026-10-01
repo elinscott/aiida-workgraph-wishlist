@@ -25,4 +25,3 @@ A ``@task`` that returns its argument unchanged: a process node that did no work
 
 What we want: ``return {"payload": payload}`` either works as a passthrough link, or fails the same way wherever the graph is called.
 
-Upstream: none yet.

@@ -18,6 +18,8 @@ A bare member builds and then dies at run; inside a ``dict`` it is refused at ru
 A graph body gets a proxy, so ``is`` is False
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Issue `node-graph #152 <https://github.com/scinode/node-graph/issues/152>`__
+
 .. literalinclude:: ../../tests/test_enum_coercion.py
    :language: python
    :start-after: # mwe: enum-graph-body
@@ -28,6 +30,8 @@ Wrapped as ``orm.EnumData``, the member reaches a graph body as a proxy on both 
 
 A task body gets a bare ``str``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Issue `node-graph #176 <https://github.com/scinode/node-graph/issues/176>`__
 
 .. literalinclude:: ../../tests/test_enum_coercion.py
    :language: python
@@ -54,6 +58,8 @@ Membership
 A member of another ``Enum`` is accepted
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+PR `node-graph #178 <https://github.com/scinode/node-graph/pull/178>`__ · PR `aiida-workgraph #800 <https://github.com/aiidateam/aiida-workgraph/pull/800>`__
+
 .. literalinclude:: ../../tests/test_enum_coercion.py
    :language: python
    :start-after: # mwe: enum-foreign-member
@@ -64,6 +70,8 @@ A ``spin: SpinType`` socket is a generic ``workgraph.annotated`` socket: ``Forei
 
 ``Literal`` narrowing constrains nothing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Issue `node-graph #175 <https://github.com/scinode/node-graph/issues/175>`__
 
 .. literalinclude:: ../../tests/test_enum_coercion.py
    :language: python
@@ -95,5 +103,3 @@ Two ways to get there
 
 1. **Builder-side.** ``Literal[SpinType.COLLINEAR, SpinType.NONE]`` on the socket; the builder checks membership once and refuses the build on a mismatch; the body gets the member unchanged.
 2. **Pydantic** ``input_model`` (`node-graph #182 <https://github.com/scinode/node-graph/issues/182>`__, `aiida-workgraph #814 <https://github.com/aiidateam/aiida-workgraph/issues/814>`__): richer rules, but a pivot. Is 1 a subset of 2?
-
-Upstream: `node-graph #152 <https://github.com/scinode/node-graph/issues/152>`__, `node-graph #175 <https://github.com/scinode/node-graph/issues/175>`__, `node-graph #176 <https://github.com/scinode/node-graph/issues/176>`__, `node-graph #178 <https://github.com/scinode/node-graph/issues/178>`__ with `aiida-workgraph #800 <https://github.com/aiidateam/aiida-workgraph/issues/800>`__.
