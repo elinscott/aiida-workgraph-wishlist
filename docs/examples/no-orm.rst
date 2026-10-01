@@ -63,8 +63,6 @@ A ``SinglefileData`` reaches a plain ``@task`` only through a profile-wide deser
 
 What we want: a body sees the Python types its signature declares, on every path.
 
-Upstream: `aiida-workgraph #780 <https://github.com/aiidateam/aiida-workgraph/issues/780>`__, `aiida-workgraph #786 <https://github.com/aiidateam/aiida-workgraph/issues/786>`__, `aiida-pythonjob #78 <https://github.com/aiidateam/aiida-pythonjob/issues/78>`__ and `aiida-pythonjob #83 <https://github.com/aiidateam/aiida-pythonjob/issues/83>`__, `node-graph #177 <https://github.com/scinode/node-graph/issues/177>`__.
-
 Should start failing once granted
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -94,3 +92,8 @@ aiida-koopmans carries these today:
 - Unwrapping a proxied flag to a plain ``bool`` before it is stored: `workgraphs/dfpt.py#L725 <https://github.com/elinscott/aiida-koopmans/blob/main/src/aiida_koopmans/workgraphs/dfpt.py#L725>`__.
 - Coercing a proxied numeric field to ``int``/``float`` before arithmetic: `workgraphs/auto_wannierize.py#L203 <https://github.com/elinscott/aiida-koopmans/blob/main/src/aiida_koopmans/workgraphs/auto_wannierize.py#L203>`__.
 - Rebuilding a parallelization entry into a plain ``dict`` before it reaches a namespace socket: `parallelization.py#L254 <https://github.com/elinscott/aiida-koopmans/blob/main/src/aiida_koopmans/parallelization.py#L254>`__.
+
+Upstream issues and PRs
+~~~~~~~~~~~~~~~~~~~~~~~
+
+`aiida-workgraph #780 <https://github.com/aiidateam/aiida-workgraph/issues/780>`__, `aiida-workgraph #786 <https://github.com/aiidateam/aiida-workgraph/issues/786>`__, `aiida-pythonjob #78 <https://github.com/aiidateam/aiida-pythonjob/issues/78>`__ and `aiida-pythonjob #83 <https://github.com/aiidateam/aiida-pythonjob/issues/83>`__, `node-graph #177 <https://github.com/scinode/node-graph/issues/177>`__.

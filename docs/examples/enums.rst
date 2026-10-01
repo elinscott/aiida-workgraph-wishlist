@@ -96,4 +96,7 @@ Two ways to get there
 1. **Builder-side.** ``Literal[SpinType.COLLINEAR, SpinType.NONE]`` on the socket; the builder checks membership once and refuses the build on a mismatch; the body gets the member unchanged.
 2. **Pydantic** ``input_model`` (`node-graph #182 <https://github.com/scinode/node-graph/issues/182>`__, `aiida-workgraph #814 <https://github.com/aiidateam/aiida-workgraph/issues/814>`__): richer rules, but a pivot. Is 1 a subset of 2?
 
-Upstream: `node-graph #152 <https://github.com/scinode/node-graph/issues/152>`__, `node-graph #175 <https://github.com/scinode/node-graph/issues/175>`__, `node-graph #176 <https://github.com/scinode/node-graph/issues/176>`__, `node-graph #178 <https://github.com/scinode/node-graph/issues/178>`__ with `aiida-workgraph #800 <https://github.com/aiidateam/aiida-workgraph/issues/800>`__.
+Upstream issues and PRs
+~~~~~~~~~~~~~~~~~~~~~~~
+
+`node-graph #152 <https://github.com/scinode/node-graph/issues/152>`__, `node-graph #175 <https://github.com/scinode/node-graph/issues/175>`__, `node-graph #176 <https://github.com/scinode/node-graph/issues/176>`__, `node-graph #178 <https://github.com/scinode/node-graph/issues/178>`__ with `aiida-workgraph #800 <https://github.com/aiidateam/aiida-workgraph/issues/800>`__.

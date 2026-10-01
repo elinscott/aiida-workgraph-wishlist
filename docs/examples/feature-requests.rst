@@ -14,8 +14,6 @@ A ``TypedDict`` return annotation yields an opaque ``workgraph.dict``; the same 
 
 What we want: a ``TypedDict`` should build the same sockets as the explicit ``namespace(...)`` spelling.
 
-Upstream: `node-graph #154 <https://github.com/scinode/node-graph/issues/154>`__ and `node-graph #159 <https://github.com/scinode/node-graph/issues/159>`__.
-
 Subscript a future the way you can multiply one
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -28,8 +26,6 @@ Subscript a future the way you can multiply one
 Destructuring a ``Map`` entry needs an unpack task, while ``n * 2`` on the same future builds an operator task.
 
 What we want: ``socket["k"]`` builds an operator task, as ``socket * 2`` already does.
-
-Upstream: `node-graph #156 <https://github.com/scinode/node-graph/issues/156>`__ and `node-graph #160 <https://github.com/scinode/node-graph/issues/160>`__.
 
 Re-scatter a gathered namespace
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -44,4 +40,9 @@ Iterating a fan-out's gathered output inline raises ``has no sub-socket 'items'`
 
 What remains: the inline error should point to the nested-graph spelling.
 
-Upstream: `node-graph #155 <https://github.com/scinode/node-graph/issues/155>`__.
+Upstream issues and PRs
+~~~~~~~~~~~~~~~~~~~~~~~
+
+- A ``TypedDict`` return annotation builds the same sockets as ``namespace(...)``: `node-graph #154 <https://github.com/scinode/node-graph/issues/154>`__ and `node-graph #159 <https://github.com/scinode/node-graph/issues/159>`__.
+- Subscript a future the way you can multiply one: `node-graph #156 <https://github.com/scinode/node-graph/issues/156>`__ and `node-graph #160 <https://github.com/scinode/node-graph/issues/160>`__.
+- Re-scatter a gathered namespace: `node-graph #155 <https://github.com/scinode/node-graph/issues/155>`__.
