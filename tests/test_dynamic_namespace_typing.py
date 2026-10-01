@@ -5,11 +5,13 @@ fan-outs gather multi-field *namespaces* (e.g. BlockWannierize -> 3 files), and
 there the typing matters in ways the docs don't cover:
 
 * an explicit ``dynamic(namespace(...))`` output IS downstream-consumable (guard);
-* the same shape typed with a ``TypedDict`` (``dynamic(SomeTypedDict)``) is NOT
-  -- it becomes an opaque ``workgraph.dict`` a namespace consumer can't link to
-  (WISH);
-* a gathered namespace can be consumed by a single downstream task, but it cannot
-  be *re-scattered* (iterated in another ``@task.graph`` loop) (WISH).
+* the same shape declared through a ``TypedDict`` RETURN annotation is NOT --
+  its dynamic field becomes an opaque ``workgraph.dict`` a namespace consumer
+  can't link to, while ``dynamic(SomeTypedDict)`` inside an explicit
+  ``namespace(...)`` return links fine (WISH);
+* a gathered namespace re-scatters when it is passed to another ``@task.graph``,
+  whose body iterates it deferred; iterating the future inline in the body that
+  gathered it raises ``TaskSocketNamespace ... has no sub-socket 'items'`` (guard).
 
 This is *why* aiida-koopmans2's Map zones used ``gather()`` -- it explicitly
 builds namespace output specs; the for-loop form needs explicit
@@ -118,17 +120,11 @@ def test_typeddict_return_annotation_is_consumable(aiida_profile):
 
 
 # ----------------------------------------------------------------------
-# WISH: a gathered namespace should be re-scatterable, not just single-consumed
+# Guard: a gathered namespace re-scatters through a nested @task.graph
 # ----------------------------------------------------------------------
 
 
 # mwe: rescatter
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: a gathered dynamic-namespace OUTPUT can be fed to "
-    "one downstream task, but iterating it in another @task.graph "
-    "(`for k, v in gathered.items()`) fails ('TaskSocketNamespace has no sub-socket'). "
-    "We wish gather -> re-scatter worked, so a fan-out's results can fan out again."
-)
 def test_gather_then_rescatter(aiida_profile):
     @task
     def scalars() -> Annotated[dict, namespace(data=dynamic(int))]:
@@ -145,8 +141,9 @@ def test_gather_then_rescatter(aiida_profile):
     @task.graph
     def top() -> Annotated[dict, namespace(out=dynamic(int))]:
         gathered = fan(data=scalars().data).out
-        # re-scatter the gathered namespace
-        return {"out": {key: dbl(v=value).result for key, value in gathered.items()}}
+        # re-scatter: hand the gathered namespace to a graph whose body iterates
+        # it deferred; `gathered.items()` here, on the future, raises instead
+        return {"out": fan(data=gathered).out}
 
     graph = top.build()
     graph.run()
