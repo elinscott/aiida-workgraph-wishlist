@@ -2,4 +2,3 @@
 .content { width: 100%; max-width: none; }
 article[role="main"] { max-width: none; }
 .sidebar-drawer { width: 16em; }
-.toc-drawer { display: none; }
