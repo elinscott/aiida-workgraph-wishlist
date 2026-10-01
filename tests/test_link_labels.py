@@ -19,11 +19,9 @@ from aiida_workgraph import task
 
 # mwe: underscore-name
 def test_underscore_task_name_raises_at_build():
-    """GUARD: a ``_underscore`` task name now fails loudly at build time."""
-
     @task
-    def _hidden() -> dict:
-        return {"_tag": "underscore", "ran": True}
+    def _hidden():
+        return True
 
     @task.graph
     def top():

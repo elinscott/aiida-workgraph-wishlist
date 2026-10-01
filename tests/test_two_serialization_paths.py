@@ -45,7 +45,6 @@ from enum import Enum
 from typing import Annotated, TypedDict
 
 import pytest
-from aiida import orm
 from aiida_workgraph import WorkGraph, dynamic, namespace, task
 
 
@@ -55,17 +54,9 @@ class SpinType(Enum):
 
 
 def test_to_dict_returns_live_objects(aiida_profile):
-    """GUARD: ``to_dict()`` is a dict of live objects, not a serialized form.
-
-    The mechanism behind the wish below: the input comes back as the identical
-    object, and the structure as a whole is not JSON-encodable, so a
-    ``from_dict(to_dict())`` round-trip never exercises any encoder the engine
-    will use.
-    """
-
     @task
-    def leaf(spin) -> dict:
-        return {"_tag": "live", "seen": str(spin)}
+    def leaf(spin):
+        return str(spin)
 
     @task.graph
     def top(spin: SpinType):
@@ -95,11 +86,9 @@ class SpinType(Enum):
     "will do' check existed. (No escape hatch: the only honest test is a full run.)"
 )
 def test_a_graph_that_round_trips_also_runs(aiida_profile):
-    """WISH: passing the round-trip means the graph will start."""
-
     @task
-    def leaf(spin) -> dict:
-        return {"_tag": "rt_then_run", "seen": str(spin)}
+    def leaf(spin):
+        return str(spin)
 
     @task.graph
     def top(spin: SpinType):
@@ -125,26 +114,18 @@ def extract(seed: int) -> Annotated[dict, namespace(x=int, y=int)]:
 
 
 @task
-def train(datasets: Annotated[dict, dynamic(Dataset)]) -> dict:
-    return {"_tag": "train", "n": len(dict(datasets))}
+def train(datasets: Annotated[dict, dynamic(Dataset)]) -> int:
+    return len(dict(datasets))
 
 
 @task.graph
 def fan_into_dynamic_namespace(seed: int):
     """The shape that died on the daemon: a fan-out into a typed dynamic input."""
     datasets = {f"snap_{i}": extract(seed=seed + i) for i in range(2)}
-    train(datasets=datasets)
+    return train(datasets=datasets).result
 
 
 def test_the_checkpoint_path_can_be_driven_without_a_daemon(aiida_profile):
-    """GUARD: the recipe for exercising what the daemon will actually do.
-
-    ``submit()`` saves a plumpy checkpoint bundle and a worker unbundles it and
-    steps the process, so the inputs reach ``WorkGraphEngine.setup`` through
-    ``aiida.orm.utils.serialize`` rather than live. Reassembling that here
-    takes four pieces and no documentation, which is the wish this module ends
-    on; the same fan-out survives it.
-    """
     import plumpy.persistence
     from aiida.engine.persistence import AiiDAPersister, get_object_loader
     from aiida.engine.utils import instantiate_process
@@ -182,10 +163,4 @@ def test_typed_dynamic_namespace_round_trips_and_runs(aiida_profile):
     graph = fan_into_dynamic_namespace.build(seed=1)
     WorkGraph.from_dict(graph.to_dict())
     graph.run()
-
-    [result] = [
-        node.get_dict()
-        for (node,) in orm.QueryBuilder().append(orm.Dict).all()
-        if node.get_dict().get("_tag") == "train"
-    ]
-    assert result["n"] == 2
+    assert graph.outputs.result.value == 2

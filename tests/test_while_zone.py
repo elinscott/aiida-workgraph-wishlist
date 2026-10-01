@@ -50,14 +50,7 @@ def inc(x: int) -> int:
     return x + 1
 
 
-@task
-def record(x) -> dict:
-    return {"_tag": "while", "final": int(x)}
-
-
-def test_do_while_today_needs_unroll_ctx_and_wait_edges(collect):
-    """The do-while pattern works, but only with the full ceremony."""
-
+def test_do_while_today_needs_unroll_ctx_and_wait_edges(aiida_profile):
     @task.graph
     def top():
         first = inc(x=0)  # tax: first iteration unrolled before the loop
@@ -68,35 +61,25 @@ def test_do_while_today_needs_unroll_ctx_and_wait_edges(collect):
         with While(cond, max_iterations=5):
             nxt = inc(x=wg.ctx.x)
             wg.ctx.x = nxt.result  # tax: re-store state every pass
-        record(x=wg.ctx.x)
+        return wg.ctx.x
 
-    [r] = collect(top, "while")
-    assert r["final"] == 3
+    graph = top.build()
+    graph.run()
+    assert graph.outputs.result.value == 3
 
 
-def test_same_loop_via_recursion_is_clean_but_has_costs(collect):
-    """The documented alternative: a recursive ``@task.graph``.
+# Module level: the body runs again at run time and finds `Loop` as a global.
+@task.graph
+def Loop(x, target):
+    if x >= target:  # condition on an INPUT -> concrete value in the body
+        return x
+    return Loop(x=inc(x=x).result, target=target)
 
-    No unrolled first iteration, no ``wg.ctx``, no ``<<`` wait edge -- the loop
-    variable is just a normal input, so the condition reads a resolved value and
-    the iteration-to-iteration value is recorded as data links (provenance-clean,
-    native to a dataflow DAG). Costs: harder to think in, a ``max_depth`` ceiling
-    (default 100), and a nested process per layer.
-    """
 
-    @task.graph
-    def Loop(x, target):
-        if x >= target:  # condition on an INPUT -> concrete value in the body
-            return x
-        return Loop(x=inc(x=x).result, target=target)
-
-    @task.graph
-    def top():
-        final = Loop(x=0, target=3)
-        record(x=final.result)
-
-    [r] = collect(top, "while")
-    assert r["final"] == 3
+def test_same_loop_via_recursion_is_clean_but_has_costs(aiida_profile):
+    graph = Loop.build(x=0, target=3)
+    graph.run()
+    assert graph.outputs.result.value == 3
 
 
 # end mwe: while-zone

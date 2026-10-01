@@ -41,7 +41,7 @@ def ident(x) -> int:
     return int(x)
 
 
-def test_explicit_namespace_gather_is_consumable(collect):
+def test_explicit_namespace_gather_is_consumable(aiida_profile):
     @task.graph
     def one(item) -> Annotated[dict, namespace(a=int)]:
         return {"a": ident(x=item["a"]).result}
@@ -56,15 +56,16 @@ def test_explicit_namespace_gather_is_consumable(collect):
         return {"out": out}
 
     @task
-    def consume(out: Annotated[dict, dynamic(namespace(a=int))]) -> dict:
-        return {"_tag": "explicit_ns", "total": sum(int(v["a"]) for v in out.values())}
+    def consume(out: Annotated[dict, dynamic(namespace(a=int))]) -> int:
+        return sum(int(v["a"]) for v in out.values())
 
     @task.graph
     def top():
-        consume(out=fan(data=numbers().data).out)
+        return consume(out=fan(data=numbers().data).out).result
 
-    [r] = collect(top, "explicit_ns")
-    assert r["total"] == 3
+    graph = top.build()
+    graph.run()
+    assert graph.outputs.result.value == 3
 
 
 class Item(TypedDict):
@@ -88,7 +89,7 @@ class Bundle(TypedDict):
     "breaks). We wish TypedDict returns were at parity -- they are the project's "
     "standard data-shape type."
 )
-def test_typeddict_return_annotation_is_consumable(collect):
+def test_typeddict_return_annotation_is_consumable(aiida_profile):
     @task.graph
     def one(item) -> Item:
         return Item(a=ident(x=item["a"]).result)
@@ -101,15 +102,16 @@ def test_typeddict_return_annotation_is_consumable(collect):
         return Bundle(out=out)
 
     @task
-    def consume(out: Annotated[dict, dynamic(Item)]) -> dict:
-        return {"_tag": "td_ret", "total": sum(int(v["a"]) for v in out.values())}
+    def consume(out: Annotated[dict, dynamic(Item)]) -> int:
+        return sum(int(v["a"]) for v in out.values())
 
     @task.graph
     def top():
-        consume(out=fan(data=numbers().data).out)
+        return consume(out=fan(data=numbers().data).out).result
 
-    [r] = collect(top, "td_ret")
-    assert r["total"] == 3
+    graph = top.build()
+    graph.run()
+    assert graph.outputs.result.value == 3
 
 
 # end mwe: typeddict-return
@@ -120,7 +122,6 @@ def test_typeddict_return_annotation_is_consumable(collect):
 # ----------------------------------------------------------------------
 
 
-
 # mwe: rescatter
 @pytest.mark.xfail(
     reason="aiida-workgraph 0.9.0 (main @ 502c1b5b) / node-graph 0.6.5: a gathered dynamic-namespace OUTPUT can be fed to "
@@ -128,34 +129,28 @@ def test_typeddict_return_annotation_is_consumable(collect):
     "(`for k, v in gathered.items()`) fails ('TaskSocketNamespace has no sub-socket'). "
     "We wish gather -> re-scatter worked, so a fan-out's results can fan out again."
 )
-def test_gather_then_rescatter(collect):
+def test_gather_then_rescatter(aiida_profile):
+    @task
+    def scalars() -> Annotated[dict, namespace(data=dynamic(int))]:
+        return {"data": {"k1": 1, "k2": 2}}
+
     @task
     def dbl(v) -> int:
         return int(v) * 2
 
     @task.graph
     def fan(data: Annotated[dict, dynamic(int)]) -> Annotated[dict, namespace(out=dynamic(int))]:
-        out = {}
-        for key, value in data.items():
-            out[key] = dbl(v=value).result
-        return {"out": out}
-
-    @task
-    def rec(v) -> dict:
-        return {"_tag": "rescatter", "v": int(v)}
-
-    @task
-    def scalars() -> Annotated[dict, namespace(data=dynamic(int))]:
-        return {"data": {"k1": 1, "k2": 2}}
+        return {"out": {key: dbl(v=value).result for key, value in data.items()}}
 
     @task.graph
-    def top():
+    def top() -> Annotated[dict, namespace(out=dynamic(int))]:
         gathered = fan(data=scalars().data).out
-        for _key, value in gathered.items():  # re-scatter the gathered namespace
-            rec(v=value)
+        # re-scatter the gathered namespace
+        return {"out": {key: dbl(v=value).result for key, value in gathered.items()}}
 
-    rs = collect(top, "rescatter")
-    assert sorted(r["v"] for r in rs) == [2, 4]
+    graph = top.build()
+    graph.run()
+    assert (graph.outputs.out.k1.value, graph.outputs.out.k2.value) == (4, 8)
 
 
 # end mwe: rescatter

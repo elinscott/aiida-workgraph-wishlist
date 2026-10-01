@@ -19,26 +19,26 @@ from aiida_workgraph import dynamic, namespace, task
 
 
 # mwe: future-annotations
-def test_dynamic_namespace_works_under_future_annotations(collect):
+def test_dynamic_namespace_works_under_future_annotations(aiida_profile):
     @task
     def src() -> Annotated[dict, namespace(data=dynamic(int))]:
         return {"data": {"k1": 1, "k2": 2}}
 
     @task
-    def sink(v) -> dict:
-        return {"_tag": "future", "v": int(v)}
+    def double(v):
+        return 2 * v
 
     @task.graph
-    def fan(data: Annotated[dict, dynamic(int)]):
-        for _key, value in data.items():
-            sink(v=value)
+    def fan(data: Annotated[dict, dynamic(int)]) -> Annotated[dict, namespace(out=dynamic(int))]:
+        return {"out": {key: double(v=value).result for key, value in data.items()}}
 
     @task.graph
-    def top():
-        fan(data=src().data)
+    def top() -> Annotated[dict, namespace(out=dynamic(int))]:
+        return {"out": fan(data=src().data).out}
 
-    rs = collect(top, "future")
-    assert sorted(r["v"] for r in rs) == [1, 2]
+    graph = top.build()
+    graph.run()
+    assert (graph.outputs.out.k1.value, graph.outputs.out.k2.value) == (2, 4)
 
 
 # end mwe: future-annotations

@@ -37,21 +37,12 @@ return annotations below are read at runtime.
 from typing import Annotated
 
 import pytest
-from aiida import orm
 from aiida_workgraph import namespace, task
 
 
 @task
 def make_payload() -> dict:
     return {"a": 1}
-
-
-def _tagged(tag):
-    return [
-        node.get_dict()
-        for (node,) in orm.QueryBuilder().append(orm.Dict).all()
-        if node.get_dict().get("_tag") == tag
-    ]
 
 
 def test_scalar_input_echoes(aiida_profile):
@@ -81,8 +72,6 @@ def test_scalar_input_echoes(aiida_profile):
     "(Documented escape hatch: a passthrough @task that returns its argument.)"
 )
 def test_dict_input_echoes_from_an_eager_body(aiida_profile):
-    """WISH: ``return {"payload": payload}`` works at the top level too."""
-
     @task.graph
     def echo_dict(payload: dict) -> Annotated[dict, namespace(payload=dict)]:
         return {"payload": payload}
@@ -106,26 +95,17 @@ def test_dict_input_echoes_from_a_deferred_body(aiida_profile):
     def echo_dict(payload: dict) -> Annotated[dict, namespace(payload=dict)]:
         return {"payload": payload}
 
-    @task
-    def sink(payload) -> dict:
-        return {"_tag": "deferred_echo", "a": dict(payload)["a"]}
-
     @task.graph
-    def top():
-        sink(payload=echo_dict(payload=make_payload().result).payload)
+    def top() -> Annotated[dict, namespace(payload=dict)]:
+        return {"payload": echo_dict(payload=make_payload().result).payload}
 
-    top.build().run()
-    assert _tagged("deferred_echo")[0]["a"] == 1
+    graph = top.build()
+    graph.run()
+    assert dict(graph.outputs.payload.value) == {"a": 1}
 
 
 # mwe: echo-passthrough
 def test_the_passthrough_task_we_ship(aiida_profile):
-    """GUARD: laundering the value through a task that returns it unchanged.
-
-    The workaround aiida-koopmans2 writes four times. It costs a process node
-    per echo and puts a task in the provenance graph that did no work.
-    """
-
     @task
     def echo(payload: dict) -> dict:
         return payload

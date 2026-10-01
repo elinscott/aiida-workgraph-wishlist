@@ -39,19 +39,11 @@ and TypedDict hints below are read at runtime to build the sockets.
 """
 
 from dataclasses import dataclass
-from typing import Optional, TypedDict
+from typing import Annotated, Optional, TypedDict
 
 import pytest
 from aiida import orm
-from aiida_workgraph import task
-
-
-def _tagged(tag):
-    return [
-        node.get_dict()
-        for (node,) in orm.QueryBuilder().append(orm.Dict).all()
-        if node.get_dict().get("_tag") == tag
-    ]
+from aiida_workgraph import namespace, task
 
 
 # ----------------------------------------------------------------------
@@ -77,18 +69,17 @@ class SettingsTypedDict(TypedDict, total=False):
     "instead -- but see the next test for what that costs today.) Upstream #779."
 )
 def test_none_field_of_a_typeddict_survives(aiida_profile):
-    """WISH: ``tot_magnetization=None`` is still a key on the far side."""
-
     @task
-    def leaf(cfg: SettingsTypedDict) -> dict:
-        return {"_tag": "td_none", "detail": ",".join(sorted(dict(cfg)))}
+    def leaf(cfg: SettingsTypedDict):
+        return "tot_magnetization" in cfg
 
     @task.graph
     def top(cfg: SettingsTypedDict):
-        leaf(cfg=cfg)
+        return leaf(cfg=cfg).result
 
-    top.build(cfg=SettingsTypedDict(nspin=1, tot_magnetization=None)).run()
-    assert _tagged("td_none")[0]["detail"] == "nspin,tot_magnetization"
+    graph = top.build(cfg=SettingsTypedDict(nspin=1, tot_magnetization=None))
+    graph.run()
+    assert graph.outputs.result.value
 
 
 # end mwe: none-typeddict-field
@@ -115,18 +106,17 @@ class Settings:
     "or carry the shape as one opaque dict value.)"
 )
 def test_dataclass_default_is_not_a_missing_input(aiida_profile):
-    """WISH: a dataclass at its own defaults builds."""
-
     @task
-    def leaf(cfg: Settings) -> dict:
-        return {"_tag": "dc_default", "detail": repr(cfg.tot_magnetization)}
+    def leaf(cfg: Settings):
+        return cfg.tot_magnetization is None
 
     @task.graph
     def top(cfg: Settings):
-        leaf(cfg=cfg)
+        return leaf(cfg=cfg).result
 
-    top.build(cfg=Settings()).run()
-    assert _tagged("dc_default")[0]["detail"] == "None"
+    graph = top.build(cfg=Settings())
+    graph.run()
+    assert graph.outputs.result.value
 
 
 # end mwe: dataclass-default
@@ -147,26 +137,22 @@ class Settings:
 
 
 @task
-def record(tag, detail) -> dict:
-    return {"_tag": tag, "detail": detail}
+def seen(x):
+    return x
 
 
 def test_task_body_rebuilds_the_dataclass(aiida_profile):
-    """GUARD: a ``@task`` body gets a real ``Settings`` with real ``int`` fields.
-
-    This is the behaviour the next test wishes for one level up.
-    """
-
     @task
-    def leaf(cfg: Settings) -> dict:
-        return {"_tag": "task_dc", "detail": f"{type(cfg).__name__}/{type(cfg.nspin).__name__}"}
+    def leaf(cfg: Settings):
+        return type(cfg.nspin).__name__
 
     @task.graph
     def top(cfg: Settings):
-        leaf(cfg=cfg)
+        return leaf(cfg=cfg).result
 
-    top.build(cfg=Settings(nspin=2, tot_magnetization=1.5)).run()
-    assert _tagged("task_dc")[0]["detail"] == "Settings/int"
+    graph = top.build(cfg=Settings(nspin=2, tot_magnetization=1.5))
+    graph.run()
+    assert graph.outputs.result.value == "int"
 
 
 @pytest.mark.xfail(
@@ -178,18 +164,17 @@ def test_task_body_rebuilds_the_dataclass(aiida_profile):
     "(Escape hatch: `int(cfg.nspin)` at every use.) Upstream #780."
 )
 def test_graph_body_int_field_is_an_int(aiida_profile):
-    """WISH: ``range(cfg.nspin)`` works in a graph body."""
-
     @task.graph
     def inner(cfg: Settings):
-        record(tag="graph_dc", detail=str(list(range(cfg.nspin))))
+        return seen(x=len(range(cfg.nspin))).result
 
     @task.graph
     def top(cfg: Settings):
-        inner(cfg=cfg)
+        return inner(cfg=cfg).result
 
-    top.build(cfg=Settings(nspin=2, tot_magnetization=1.5)).run()
-    assert _tagged("graph_dc")[0]["detail"] == "[0, 1]"
+    graph = top.build(cfg=Settings(nspin=2, tot_magnetization=1.5))
+    graph.run()
+    assert graph.outputs.result.value == 2
 
 
 # end mwe: int-field
@@ -202,8 +187,8 @@ def test_graph_body_int_field_is_an_int(aiida_profile):
 
 # mwe: dict-input
 @task
-def record(tag, detail) -> dict:
-    return {"_tag": tag, "detail": detail}
+def seen(x):
+    return x
 
 
 @pytest.mark.xfail(
@@ -217,23 +202,18 @@ def record(tag, detail) -> dict:
     "the mapping with `dict((x or {}).items())` before touching it.)"
 )
 def test_dict_input_is_the_same_on_both_paths(aiida_profile):
-    """WISH: a ``dict`` input is a ``dict`` wherever the body runs."""
-
-    def looks_like_a_dict(d):
-        return isinstance(d, dict)
-
     @task.graph
     def inner(d: dict):
-        record(tag="deferred_dict", detail=str(looks_like_a_dict(d)))
+        return seen(x=isinstance(d, dict)).result
 
     @task.graph
-    def top(d: dict):
-        record(tag="eager_dict", detail=str(looks_like_a_dict(d)))
-        inner(d=d)
+    def top(d: dict) -> Annotated[dict, namespace(eager=bool, deferred=bool)]:
+        return {"eager": seen(x=isinstance(d, dict)).result, "deferred": inner(d=d).result}
 
-    top.build(d={"a": 1}).run()
-    assert _tagged("eager_dict")[0]["detail"] == "True"
-    assert _tagged("deferred_dict")[0]["detail"] == "True"
+    graph = top.build(d={"a": 1})
+    graph.run()
+    assert graph.outputs.eager.value
+    assert graph.outputs.deferred.value
 
 
 # end mwe: dict-input
@@ -256,46 +236,38 @@ def test_dict_input_is_the_same_on_both_paths(aiida_profile):
     "@task.calcfunction, which costs a process node and provenance you may not want "
     "-- see the guard below.) Upstream aiida-pythonjob #78, #83."
 )
-def test_plain_task_can_take_a_file_node(aiida_profile, tmp_path):
-    """WISH: a plain ``@task`` body can be handed a ``SinglefileData``."""
-    path = tmp_path / "input.txt"
-    path.write_text("hello")
-    node = orm.SinglefileData(file=str(path))
-    node.store()
-
+def test_plain_task_can_take_a_file_node(aiida_profile):
     @task
-    def leaf(f) -> dict:
-        return {"_tag": "sfd_task", "detail": f.get_content()}
+    def leaf(f):
+        return f.get_content()
 
     @task.graph
     def top(f):
-        leaf(f=f)
+        return leaf(f=f).result
 
-    top.build(f=node).run()
-    assert _tagged("sfd_task")[0]["detail"] == "hello"
+    graph = top.build(f=orm.SinglefileData.from_string("hello"))
+    graph.run()
+    assert graph.outputs.result.value == "hello"
 
 
 # end mwe: file-node
 
 
-def test_calcfunction_is_the_only_way_to_a_file_node(aiida_profile, tmp_path):
+def test_calcfunction_is_the_only_way_to_a_file_node(aiida_profile):
     """GUARD: a ``@task.calcfunction`` receives the real node.
 
     This is why aiida-koopmans2 declares a calcfunction wherever a body needs a
     folder or a file, even when nothing about the work is a calculation.
     """
-    path = tmp_path / "input.txt"
-    path.write_text("hello")
-    node = orm.SinglefileData(file=str(path))
-    node.store()
 
     @task.calcfunction
-    def leaf(f) -> orm.Dict:
-        return orm.Dict({"_tag": "sfd_calcfunction", "detail": f.get_content()})
+    def leaf(f):
+        return orm.Str(f.get_content())
 
     @task.graph
     def top(f):
-        leaf(f=f)
+        return leaf(f=f).result
 
-    top.build(f=node).run()
-    assert _tagged("sfd_calcfunction")[0]["detail"] == "hello"
+    graph = top.build(f=orm.SinglefileData.from_string("hello"))
+    graph.run()
+    assert graph.outputs.result.value == "hello"

@@ -43,50 +43,40 @@ def make_items() -> Annotated[dict, dynamic(dict)]:
     return {"i1": {"n": 7}, "i2": {"n": 99}}
 
 
-def test_map_value_is_the_item(collect):
-    """GUARD: ``z.value`` is the current entry, ``z.key`` its key.
-
-    Was a wish (#785): the zone used to expose ``z.item``, the map_item task's
-    OUTPUTS namespace, so user code had to write ``z.item.value`` -- internal
-    machinery a user should never type -- and passing ``z.item`` itself raised
-    "link a top-level output socket without a parent". #792 granted it.
-    ``z.item`` still resolves, with a DeprecationWarning.
-    """
-
+def test_map_value_is_the_item(aiida_profile):
     @task
-    def sink(item, key) -> dict:
-        return {"_tag": "map_value", "n": item["n"], "key": str(key)}
+    def sink(item, key):
+        return f"{key}={item['n']}"
 
     @task.graph
-    def top():
+    def top() -> Annotated[dict, namespace(seen=dynamic(str))]:
         with Map(make_items()) as z:
-            sink(item=z.value, key=z.key)
+            z.gather({"seen": sink(item=z.value, key=z.key).result})
+        return {"seen": z.outputs.seen}
 
-    rs = collect(top, "map_value")
-    assert sorted((r["key"], r["n"]) for r in rs) == [("i1", 7), ("i2", 99)]
+    graph = top.build()
+    graph.run()
+    assert (graph.outputs.seen.i1.value, graph.outputs.seen.i2.value) == ("i1=7", "i2=99")
 
 
 # end mwe: map-value
 
 
-def test_socket_arithmetic_builds_operator_tasks(collect):
+def test_socket_arithmetic_builds_operator_tasks(aiida_profile):
     """``socket * 2`` and ``socket // 2`` work -- node-graph builds operator tasks."""
 
     @task
     def make_n() -> int:
         return 21
 
-    @task
-    def sink(mul, floordiv) -> dict:
-        return {"_tag": "arith", "mul": mul, "floordiv": floordiv}
-
     @task.graph
-    def top():
+    def top() -> Annotated[dict, namespace(mul=int, floordiv=int)]:
         n = make_n().result
-        sink(mul=n * 2, floordiv=n // 2)
+        return {"mul": n * 2, "floordiv": n // 2}
 
-    [r] = collect(top, "arith")
-    assert (r["mul"], r["floordiv"]) == (42, 10)
+    graph = top.build()
+    graph.run()
+    assert (graph.outputs.mul.value, graph.outputs.floordiv.value) == (42, 10)
 
 
 def test_eager_subscript_of_future_raises_loudly():
@@ -97,8 +87,8 @@ def test_eager_subscript_of_future_raises_loudly():
     from node_graph.errors import GraphDeferredIllegalOperationError
 
     @task
-    def sink(n) -> dict:
-        return {"_tag": "loud", "n": n}
+    def sink(n):
+        return n
 
     @task.graph
     def top():
@@ -115,34 +105,27 @@ def test_eager_subscript_of_future_raises_loudly():
 
 
 # mwe: for-loop-fanout
-def test_dynamic_fanout_via_for_loop_is_clean(collect):
-    """The docs' scatter-gather: ``for k, v in data.items()`` in a ``@task.graph``.
-
-    No ``Map`` zone, no unpack ``@task``. The body is deferred, so ``data`` is
-    concrete: you iterate it and subscript each item inline. This is the
-    documented dynamic fan-out and the clean answer to the Map wish below --
-    aiida-koopmans2's Map zones (`unpack_block_item` etc.) are the anti-pattern.
-    """
-
+def test_dynamic_fanout_via_for_loop_is_clean(aiida_profile):
     @task
     def items() -> Annotated[dict, namespace(data=dynamic(dict))]:
         return {"data": {"k1": {"a": 1, "b": 2}, "k2": {"a": 10, "b": 20}}}
 
     @task
-    def combine(a, b) -> dict:
-        return {"_tag": "fanout", "total": int(a) + int(b)}
+    def combine(a, b):
+        return int(a) + int(b)
 
     @task.graph
-    def fan(data: Annotated[dict, dynamic(dict)]):
-        for _key, item in data.items():
-            combine(a=item["a"], b=item["b"])  # subscript inline; no unpack task
+    def fan(data: Annotated[dict, dynamic(dict)]) -> Annotated[dict, namespace(totals=dynamic(int))]:
+        # subscript inline; no unpack task
+        return {"totals": {key: combine(a=item["a"], b=item["b"]).result for key, item in data.items()}}
 
     @task.graph
-    def top():
-        fan(data=items().data)
+    def top() -> Annotated[dict, namespace(totals=dynamic(int))]:
+        return {"totals": fan(data=items().data).totals}
 
-    rs = collect(top, "fanout")
-    assert sorted(r["total"] for r in rs) == [3, 30]
+    graph = top.build()
+    graph.run()
+    assert (graph.outputs.totals.k1.value, graph.outputs.totals.k2.value) == (3, 30)
 
 
 # end mwe: for-loop-fanout
@@ -166,24 +149,24 @@ def test_dynamic_fanout_via_for_loop_is_clean(collect):
     "`for k, v in data.items()` in a @task.graph subscripts inline -- see the guard "
     "above; the Map zone is the anti-pattern.)"
 )
-def test_destructure_map_item_without_unpack_task(collect):
-    """WISH: feed a Map entry's fields into a task without a wrapper unpack @task."""
-
+def test_destructure_map_item_without_unpack_task(aiida_profile):
     @task
     def two_field_items() -> Annotated[dict, dynamic(dict)]:
         return {"k1": {"a": 1, "b": 2}, "k2": {"a": 10, "b": 20}}
 
     @task
-    def sink(a, b) -> dict:
-        return {"_tag": "destructure", "total": a + b}
+    def add(a, b):
+        return a + b
 
     @task.graph
-    def top():
+    def top() -> Annotated[dict, namespace(totals=dynamic(int))]:
         with Map(two_field_items()) as z:
-            sink(a=z.value["a"], b=z.value["b"])
+            z.gather({"totals": add(a=z.value["a"], b=z.value["b"]).result})
+        return {"totals": z.outputs.totals}
 
-    rs = collect(top, "destructure")
-    assert sorted(r["total"] for r in rs) == [3, 30]
+    graph = top.build()
+    graph.run()
+    assert (graph.outputs.totals.k1.value, graph.outputs.totals.k2.value) == (3, 30)
 
 
 # end mwe: map-destructure

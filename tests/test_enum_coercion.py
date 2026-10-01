@@ -44,19 +44,11 @@ NOTE: deliberately no ``from __future__ import annotations`` -- the Enum and
 """
 
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Literal
 
 import pytest
 from aiida import orm
-from aiida_workgraph import WorkGraph, task
-
-
-def _tagged(tag):
-    return [
-        node.get_dict()
-        for (node,) in orm.QueryBuilder().append(orm.Dict).all()
-        if node.get_dict().get("_tag") == tag
-    ]
+from aiida_workgraph import WorkGraph, namespace, task
 
 
 # ----------------------------------------------------------------------
@@ -85,32 +77,23 @@ class SpinType(Enum):
     "what that then delivers.)"
 )
 def test_enum_member_crosses_a_socket(aiida_profile):
-    """WISH: ``spin=SpinType.COLLINEAR`` reaches the task."""
-
     @task
-    def leaf(spin) -> dict:
-        return {"_tag": "bare", "seen": str(spin)}
+    def leaf(spin):
+        return str(spin)
 
     @task.graph
     def top(spin: SpinType):
-        leaf(spin=spin)
+        return leaf(spin=spin).result
 
-    top.build(spin=SpinType.COLLINEAR).run()
-    assert _tagged("bare")
+    graph = top.build(spin=SpinType.COLLINEAR)
+    graph.run()
+    assert graph.outputs.result.value == "SpinType.COLLINEAR"
 
 
 def test_enum_nested_in_a_dict_is_refused(aiida_profile):
-    """GUARD: smuggling a member inside a ``dict`` input fails loudly.
-
-    The one place the framework does say no, with a message that names the
-    type: ``type `<enum 'SpinType'>` is not supported as it is not
-    json-serializable``. Pinned so the loudness is a regression if it is ever
-    softened to a silent coercion. It fires on the run, not the build.
-    """
-
     @task
-    def leaf(cfg) -> dict:
-        return {"_tag": "nested", "seen": str(cfg["spin"])}
+    def leaf(cfg):
+        return str(cfg["spin"])
 
     @task.graph
     def top(cfg: dict):
@@ -143,11 +126,8 @@ def third_party(spin):
 
 
 @task
-def record(tag, verdict=None, eq=None, ok=None) -> dict:
-    # NOTE: the tag cannot be named `_tag` on the signature -- a leading
-    # underscore is a reserved builtin socket name and the assignment is
-    # refused at build.
-    return {"_tag": tag, "verdict": verdict, "eq": eq, "ok": ok}
+def seen(x):
+    return x
 
 
 @pytest.mark.xfail(
@@ -161,23 +141,17 @@ def record(tag, verdict=None, eq=None, ok=None) -> dict:
     "`SpinType(getattr(spin, 'value', spin))` at every such call site.)"
 )
 def test_graph_body_receives_the_member(aiida_profile):
-    """WISH: a graph body can hand its Enum input straight to a library."""
-
     @task.graph
     def inner(spin: SpinType):
-        record(tag="deferred", verdict=third_party(spin), eq=(spin == SpinType.COLLINEAR))
+        return seen(x=third_party(spin)).result
 
     @task.graph
-    def top(spin: SpinType):
-        record(tag="eager", verdict=third_party(spin), eq=(spin == SpinType.COLLINEAR))
-        inner(spin=spin)
+    def top(spin: SpinType) -> Annotated[dict, namespace(eager=str, deferred=str)]:
+        return {"eager": seen(x=third_party(spin)).result, "deferred": inner(spin=spin).result}
 
-    top.build(spin=orm.EnumData(SpinType.COLLINEAR)).run()
-    [eager] = _tagged("eager")
-    [deferred] = _tagged("deferred")
-    # `==` already works on both paths; it is `is` that the wish is about.
-    assert (eager["eq"], deferred["eq"]) == (True, True)
-    assert (eager["verdict"], deferred["verdict"]) == ("polarized", "polarized")
+    graph = top.build(spin=orm.EnumData(SpinType.COLLINEAR))
+    graph.run()
+    assert (graph.outputs.eager.value, graph.outputs.deferred.value) == ("polarized", "polarized")
 
 
 # end mwe: enum-graph-body
@@ -201,23 +175,17 @@ class SpinType(Enum):
     "happens to cover both shapes, which is why it is applied blindly.)"
 )
 def test_task_body_receives_the_member(aiida_profile):
-    """WISH: a task body sees the same thing its graph body saw."""
-
     @task
-    def leaf(spin) -> dict:
-        return {
-            "_tag": "leaf",
-            "type_name": type(spin).__name__,
-            "eq": spin == SpinType.COLLINEAR,
-        }
+    def leaf(spin):
+        return type(spin).__name__
 
     @task.graph
     def top(spin: SpinType):
-        leaf(spin=spin)
+        return leaf(spin=spin).result
 
-    top.build(spin=orm.EnumData(SpinType.COLLINEAR)).run()
-    [seen] = _tagged("leaf")
-    assert seen["eq"] is True, f"arrived as {seen['type_name']}"
+    graph = top.build(spin=orm.EnumData(SpinType.COLLINEAR))
+    graph.run()
+    assert graph.outputs.result.value == "SpinType"
 
 
 # end mwe: enum-task-body
@@ -232,7 +200,7 @@ def test_the_member_survives_to_dict_and_back(aiida_profile):
 
     @task.graph
     def inner(spin: SpinType):
-        record(tag="rt", verdict=third_party(spin))
+        return seen(x=third_party(spin)).result
 
     @task.graph
     def top(spin: SpinType):
@@ -265,38 +233,26 @@ def coerce(enum_cls, value):
 
 
 @task
-def record(tag, verdict=None, eq=None, ok=None) -> dict:
-    # NOTE: the tag cannot be named `_tag` on the signature -- a leading
-    # underscore is a reserved builtin socket name and the assignment is
-    # refused at build.
-    return {"_tag": tag, "verdict": verdict, "eq": eq, "ok": ok}
+def seen(x):
+    return x
 
 
 def test_the_coercion_we_apply_everywhere(aiida_profile):
-    """GUARD: ``enum_cls(getattr(value, 'value', value))`` recovers the member.
-
-    aiida-koopmans2 applies this at every body that forwards an Enum onward
-    (``workgraphs/__init__.py:unwrap_enum``), uniformly, because where a graph
-    sits in the call tree is the caller's choice and the two paths deliver
-    different types. It is an anti-pattern for two reasons: it must be written
-    at the call site rather than declared on the socket, and it silently accepts
-    a foreign member whose value matches.
-    """
-
     @task
-    def leaf(spin) -> dict:
-        member = coerce(SpinType, spin)
-        return {"_tag": "coerced_leaf", "ok": member is SpinType.COLLINEAR}
+    def leaf(spin):
+        return coerce(SpinType, spin) is SpinType.COLLINEAR
 
     @task.graph
-    def top(spin: SpinType):
-        member = coerce(SpinType, spin)
-        record(tag="coerced_body", ok=(member is SpinType.COLLINEAR))
-        leaf(spin=spin)
+    def top(spin: SpinType) -> Annotated[dict, namespace(body=bool, leaf=bool)]:
+        return {
+            "body": seen(x=coerce(SpinType, spin) is SpinType.COLLINEAR).result,
+            "leaf": leaf(spin=spin).result,
+        }
 
-    top.build(spin=orm.EnumData(SpinType.COLLINEAR)).run()
-    assert _tagged("coerced_body")[0]["ok"] is True
-    assert _tagged("coerced_leaf")[0]["ok"] is True
+    graph = top.build(spin=orm.EnumData(SpinType.COLLINEAR))
+    graph.run()
+    assert graph.outputs.body.value
+    assert graph.outputs.leaf.value
 
 
 # end mwe: enum-coerce
@@ -331,11 +287,9 @@ class Foreign(Enum):
     "(No escape hatch: every route hand-writes its own refusal.)"
 )
 def test_foreign_member_is_rejected_at_build(aiida_profile):
-    """WISH: ``Foreign.COLLINEAR`` is refused by a ``SpinType`` socket."""
-
     @task
-    def leaf(spin) -> dict:
-        return {"_tag": "foreign", "seen": str(spin)}
+    def leaf(spin):
+        return spin
 
     @task.graph
     def top(spin: SpinType):
@@ -368,11 +322,9 @@ class SpinType(Enum):
     "with no coercion anywhere. (No escape hatch: the route validates by hand.)"
 )
 def test_literal_narrowing_is_enforced_at_build(aiida_profile):
-    """WISH: a two-member ``Literal`` socket refuses the third member."""
-
     @task
-    def leaf(spin: Literal[SpinType.COLLINEAR, SpinType.NONE]) -> dict:
-        return {"_tag": "literal", "seen": str(spin)}
+    def leaf(spin: Literal[SpinType.COLLINEAR, SpinType.NONE]):
+        return spin
 
     @task.graph
     def top(spin):
