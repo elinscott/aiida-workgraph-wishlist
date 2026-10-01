@@ -28,6 +28,11 @@ Overarching questions
 
 A bare member crosses a socket only with a serializer registered per Enum class; a graph body then sees a proxy and a task body a ``str``. Full set: :doc:`examples/enums`.
 
+.. literalinclude:: ../tests/wishlist_types.py
+   :language: python
+   :pyobject: SpinType
+   :caption: `tests/wishlist_types.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/wishlist_types.py>`__
+
 1.1 What we would like to write
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -52,6 +57,11 @@ Once granted, ``spin.get_member()`` in a body must raise; the suite pins that.
 -------------------------
 
 An ``int`` declared in the signature arrives as ``orm.Int`` inside a deferred graph body. Full set: :doc:`examples/no-orm`.
+
+.. literalinclude:: ../tests/wishlist_types.py
+   :language: python
+   :pyobject: Settings
+   :caption: `tests/wishlist_types.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/wishlist_types.py>`__
 
 2.1 What we would like to write
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
