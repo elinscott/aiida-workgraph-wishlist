@@ -1,14 +1,11 @@
-"""The meeting notes page's worked examples: want / today / should-fail, per topic.
+"""Worked examples behind the docs: want / today / should-fail, per topic.
 
-``docs/index.rst`` walks three topics (Enums, plain Python in bodies, eager vs
-deferred bodies) and for each shows the code we would like to write, the code
-we actually write today, and one example that passes today but, once the
-underlying wish is granted, ought to start failing. This module backs those
-nine snippets.
+The main page shows, per topic, the code we would like to write and the code we
+write today; the should-fail examples pass today and must start failing once
+the wish is granted, and sit in dropdowns on the sub-pages.
 
-Each ``# mwe:`` region is one example in ``docs/index.rst`` and must read on
-its own, so a definition shared by two regions is repeated in each,
-identically; the tests bind the last copy.
+Each ``# mwe:`` region is included on its own, so a definition shared by two
+regions is repeated in each, identically; the tests bind the last copy.
 """
 
 from __future__ import annotations
