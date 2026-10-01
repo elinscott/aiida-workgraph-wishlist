@@ -7,10 +7,13 @@ Empirically (aiida-workgraph 0.9.0, upstream main @ 502c1b5b; node-graph 0.6.5)
 that check is weaker than it looks:
 
 * ``to_dict()`` is not serialization. It returns a dict of LIVE Python objects
-  -- the graph input you passed comes back as the very same object, and the
-  whole structure is not JSON-encodable -> PASS (the mechanism);
+  -- the graph input you passed comes back as the very same object, so the dict
+  is JSON-encodable only when every input already is -> PASS (the mechanism);
 * so a graph can round-trip perfectly and still fail the moment it runs, on the
-  values the round-trip handed back untouched -> WISH.
+  values the round-trip handed back untouched. ``run()`` serializes through
+  ``to_engine_inputs()`` (``to_dict(should_serialize=True)``), a public method
+  upstream's how-to documents, and calling it directly raises the same error at
+  build, with no run -> PASS (the check to use instead of the round-trip).
 
 There is a third path, the one the daemon takes: ``submit()`` saves a plumpy
 checkpoint bundle and a worker unbundles it and steps the process, so the
@@ -32,8 +35,9 @@ shape is the one that broke. See
 ``proposed-issues/14-aiida-workgraph-two-serialization-paths.md`` for the
 grading.
 
-Two wishes: one serialization path a test can exercise, and an error message
-that names the child that mismatched.
+Two wishes: that the round-trip every graph shape gets were the engine's
+serialization (today ``to_engine_inputs()`` is, and nothing points a test author
+at it), and an error message that names the child that mismatched.
 
 Each ``# mwe:`` region below is one example in ``docs/index.rst`` and must
 read on its own, so a definition two regions share is repeated in each,
@@ -76,16 +80,7 @@ class SpinType(Enum):
     COLLINEAR = "collinear"
 
 
-@pytest.mark.xfail(
-    reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a graph whose input the engine "
-    "cannot serialize round-trips through `from_dict(to_dict())` without complaint, "
-    "because `to_dict()` hands the object straight back, and then dies at run with "
-    "`ValueError: Cannot serialize the provided object`. The round-trip is the check "
-    "a test can make; it is not the check that decides whether the graph runs. We "
-    "wish one serialization path were testable, or that a supported 'what the engine "
-    "will do' check existed. (No escape hatch: the only honest test is a full run.)"
-)
-def test_a_graph_that_round_trips_also_runs(aiida_profile):
+def test_engine_inputs_catch_what_the_round_trip_misses(aiida_profile):
     @task
     def leaf(spin):
         return str(spin)
@@ -95,8 +90,9 @@ def test_a_graph_that_round_trips_also_runs(aiida_profile):
         leaf(spin=spin)
 
     graph = top.build(spin=SpinType.COLLINEAR)
-    WorkGraph.from_dict(graph.to_dict())  # the guard every graph shape gets
-    graph.run()  # ValueError: Cannot serialize the provided object
+    WorkGraph.from_dict(graph.to_dict())  # the guard every graph shape gets: passes
+    with pytest.raises(ValueError, match="Cannot serialize the provided object"):
+        graph.to_engine_inputs()  # what run() serializes through, without a run
 
 
 # end mwe: round-trip-runs
