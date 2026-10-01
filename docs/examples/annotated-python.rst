@@ -6,7 +6,7 @@ What we want: take a function annotated with ``TypedDict`` and ``dataclass`` typ
 ``None`` is a value
 ~~~~~~~~~~~~~~~~~~~
 
-Issue `aiida-workgraph #779 <https://github.com/aiidateam/aiida-workgraph/issues/779>`__ · Issue `node-graph #172 <https://github.com/scinode/node-graph/issues/172>`__ · PR `node-graph #173 <https://github.com/scinode/node-graph/pull/173>`__ · PR `node-graph #174 <https://github.com/scinode/node-graph/pull/174>`__
+**Issue** `aiida-workgraph #779 <https://github.com/aiidateam/aiida-workgraph/issues/779>`__ · **Issue** `node-graph #172 <https://github.com/scinode/node-graph/issues/172>`__ · **PR** `node-graph #173 <https://github.com/scinode/node-graph/pull/173>`__ · **PR** `node-graph #174 <https://github.com/scinode/node-graph/pull/174>`__
 
 .. dropdown:: A ``None`` field of a TypedDict is gone on the far side (wish)
 

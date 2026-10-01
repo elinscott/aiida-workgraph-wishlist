@@ -4,7 +4,7 @@ Feature requests
 A ``TypedDict`` return annotation builds the same sockets as ``namespace(...)``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Issue `node-graph #154 <https://github.com/scinode/node-graph/issues/154>`__ · PR `node-graph #159 <https://github.com/scinode/node-graph/pull/159>`__
+**Issue** `node-graph #154 <https://github.com/scinode/node-graph/issues/154>`__ · **PR** `node-graph #159 <https://github.com/scinode/node-graph/pull/159>`__
 
 .. literalinclude:: ../../tests/test_dynamic_namespace_typing.py
    :language: python
@@ -19,7 +19,7 @@ What we want: a ``TypedDict`` should build the same sockets as the explicit ``na
 Subscript a future the way you can multiply one
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Issue `node-graph #156 <https://github.com/scinode/node-graph/issues/156>`__ · PR `node-graph #160 <https://github.com/scinode/node-graph/pull/160>`__
+**Issue** `node-graph #156 <https://github.com/scinode/node-graph/issues/156>`__ · **PR** `node-graph #160 <https://github.com/scinode/node-graph/pull/160>`__
 
 .. literalinclude:: ../../tests/test_zone_ergonomics.py
    :language: python
@@ -34,7 +34,7 @@ What we want: ``socket["k"]`` builds an operator task, as ``socket * 2`` already
 Re-scatter a gathered namespace
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Issue `node-graph #155 <https://github.com/scinode/node-graph/issues/155>`__
+**Issue** `node-graph #155 <https://github.com/scinode/node-graph/issues/155>`__
 
 .. literalinclude:: ../../tests/test_dynamic_namespace_typing.py
    :language: python

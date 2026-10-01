@@ -7,7 +7,7 @@ No ORM objects floating around (design)
 A ``dataclass`` ``int`` field is an ``orm.Int`` in a graph body
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Issue `aiida-workgraph #780 <https://github.com/aiidateam/aiida-workgraph/issues/780>`__
+**Issue** `aiida-workgraph #780 <https://github.com/aiidateam/aiida-workgraph/issues/780>`__
 
 .. literalinclude:: ../../tests/test_plain_python_in_bodies.py
    :language: python
@@ -20,7 +20,7 @@ In a ``@task.graph`` body that runs deferred, a ``dataclass`` ``int`` field is a
 A ``dict`` input is a ``dict`` eagerly and an ``orm.Dict`` deferred
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PR `node-graph #177 <https://github.com/scinode/node-graph/pull/177>`__
+**PR** `node-graph #177 <https://github.com/scinode/node-graph/pull/177>`__
 
 .. literalinclude:: ../../tests/test_plain_python_in_bodies.py
    :language: python
@@ -33,7 +33,7 @@ A ``dict`` input is a proxy over ``dict`` when the body runs eagerly and over ``
 A scalar input needs ``.value``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Issue `aiida-workgraph #786 <https://github.com/aiidateam/aiida-workgraph/issues/786>`__
+**Issue** `aiida-workgraph #786 <https://github.com/aiidateam/aiida-workgraph/issues/786>`__
 
 .. literalinclude:: ../../tests/test_node_and_serialization.py
    :language: python
@@ -59,7 +59,7 @@ What already works in a deferred body
 Nodes a body needs whole
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Issue `aiida-pythonjob #78 <https://github.com/aiidateam/aiida-pythonjob/issues/78>`__ · Issue `aiida-pythonjob #83 <https://github.com/aiidateam/aiida-pythonjob/issues/83>`__
+**Issue** `aiida-pythonjob #78 <https://github.com/aiidateam/aiida-pythonjob/issues/78>`__ · **Issue** `aiida-pythonjob #83 <https://github.com/aiidateam/aiida-pythonjob/issues/83>`__
 
 .. literalinclude:: ../../tests/test_plain_python_in_bodies.py
    :language: python

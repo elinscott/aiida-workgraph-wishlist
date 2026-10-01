@@ -18,7 +18,7 @@ A bare member builds and then dies at run; inside a ``dict`` it is refused at ru
 A graph body gets a proxy, so ``is`` is False
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Issue `node-graph #152 <https://github.com/scinode/node-graph/issues/152>`__
+**Issue** `node-graph #152 <https://github.com/scinode/node-graph/issues/152>`__
 
 .. literalinclude:: ../../tests/test_enum_coercion.py
    :language: python
@@ -31,7 +31,7 @@ Wrapped as ``orm.EnumData``, the member reaches a graph body as a proxy on both 
 A task body gets a bare ``str``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Issue `node-graph #176 <https://github.com/scinode/node-graph/issues/176>`__
+**Issue** `node-graph #176 <https://github.com/scinode/node-graph/issues/176>`__
 
 .. literalinclude:: ../../tests/test_enum_coercion.py
    :language: python
@@ -58,7 +58,7 @@ Membership
 A member of another ``Enum`` is accepted
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PR `node-graph #178 <https://github.com/scinode/node-graph/pull/178>`__ · PR `aiida-workgraph #800 <https://github.com/aiidateam/aiida-workgraph/pull/800>`__
+**PR** `node-graph #178 <https://github.com/scinode/node-graph/pull/178>`__ · **PR** `aiida-workgraph #800 <https://github.com/aiidateam/aiida-workgraph/pull/800>`__
 
 .. literalinclude:: ../../tests/test_enum_coercion.py
    :language: python
@@ -71,7 +71,7 @@ A ``spin: SpinType`` socket is a generic ``workgraph.annotated`` socket: ``Forei
 ``Literal`` narrowing constrains nothing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Issue `node-graph #175 <https://github.com/scinode/node-graph/issues/175>`__
+**Issue** `node-graph #175 <https://github.com/scinode/node-graph/issues/175>`__
 
 .. literalinclude:: ../../tests/test_enum_coercion.py
    :language: python
