@@ -7,7 +7,7 @@ from aiida_workgraph import task
 
 
 @task
-def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body\'s value goes through a task
+def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body's value goes through a task
     return x
 
 
