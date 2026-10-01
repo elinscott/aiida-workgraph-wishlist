@@ -7,14 +7,14 @@ from aiida_workgraph import task
 
 
 @task
-def seen(x: bool) -> bool:
+def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body\'s value goes through a task
     return x
 
 
 def test_dict_should_fail(aiida_profile):
     @task.graph
     def inner(overrides: dict[str, int]) -> bool:
-        return seen(x=overrides.get_dict() == {"ecutwfc": 40}).result
+        return as_output(x=overrides.get_dict() == {"ecutwfc": 40}).result
 
     @task.graph
     def top(overrides: dict[str, int]) -> bool:

@@ -7,7 +7,7 @@ from aiida_workgraph import task
 
 
 @task
-def seen(x: bool) -> bool:
+def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body\'s value goes through a task
     return x
 
 
@@ -15,7 +15,7 @@ def test_dict_today(aiida_profile):
     @task.graph
     def inner(overrides: dict[str, int]) -> bool:
         overrides = dict(overrides)  # proxy over orm.Dict -> dict
-        return seen(x=isinstance(overrides, dict)).result
+        return as_output(x=isinstance(overrides, dict)).result
 
     @task.graph
     def top(overrides: dict[str, int]) -> bool:

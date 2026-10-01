@@ -9,14 +9,14 @@ from wishlist_types import SpinType
 
 
 @task
-def seen(x: bool) -> bool:
+def as_output(x: bool) -> bool:  # a graph output must be a socket, so a body\'s value goes through a task
     return x
 
 
 def test_enum_should_fail(aiida_profile):
     @task.graph
     def inner(spin: SpinType) -> bool:
-        return seen(x=spin.get_member() is SpinType.COLLINEAR).result
+        return as_output(x=spin.get_member() is SpinType.COLLINEAR).result
 
     @task.graph
     def top(spin: SpinType) -> bool:

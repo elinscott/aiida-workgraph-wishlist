@@ -9,7 +9,7 @@ from wishlist_types import Settings
 
 
 @task
-def seen(x: int) -> int:
+def as_output(x: int) -> int:  # a graph output must be a socket, so a body\'s value goes through a task
     return x
 
 
@@ -17,7 +17,7 @@ def test_int_today(aiida_profile):
     @task.graph
     def inner(cfg: Settings) -> int:
         nspin = int(cfg.nspin)  # orm.Int -> int, or range() fails
-        return seen(x=len(range(nspin))).result
+        return as_output(x=len(range(nspin))).result
 
     @task.graph
     def top(cfg: Settings) -> int:

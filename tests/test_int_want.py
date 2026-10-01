@@ -9,16 +9,11 @@ from aiida_workgraph import task
 from wishlist_types import Settings
 
 
-@task
-def seen(x: int) -> int:
-    return x
-
-
-@pytest.mark.xfail(reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a deferred graph body gets orm.Int for an int field")
+@pytest.mark.xfail(reason="aiida-workgraph 0.9.0 (main @ 502c1b5b): a deferred graph body gets orm.Int for an int field, and a graph body cannot return a plain value")
 def test_int_want(aiida_profile):
     @task.graph
     def inner(cfg: Settings) -> int:
-        return seen(x=len(range(cfg.nspin))).result
+        return len(range(cfg.nspin))
 
     @task.graph
     def top(cfg: Settings) -> int:
@@ -26,5 +21,5 @@ def test_int_want(aiida_profile):
 
     graph = top.build(cfg=Settings(nspin=2))
     graph.run()  # today: inner fails, TypeError: 'Int' object cannot be interpreted as an integer
-    assert graph.outputs.result.value == 2
+    assert graph.outputs.result.value == 2  # today: None, inner failed on range(): TypeError: 'Int' object cannot be interpreted as an integer
 # end mwe: int-want
