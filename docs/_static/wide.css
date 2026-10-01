@@ -1,5 +1,11 @@
-/* Use the browser width: furo caps the content column at 46em. */
+/* Use the browser width: furo caps the content column at 46em. Keep furo's
+   own responsive rules below 82em, where it already folds the drawers away. */
+.main { min-width: 0; }
 .content { flex: 1 1 auto; width: auto; max-width: none; min-width: 0; }
+.content > * { min-width: 0; }
 article[role="main"] { max-width: none; }
-.sidebar-drawer { width: 16em; flex: 0 0 16em; }
-.toc-drawer { flex: 0 0 15em; }
+
+@media (min-width: 82em) {
+  .sidebar-drawer { width: 16em; flex: 0 0 16em; }
+  .toc-drawer { flex: 0 0 15em; }
+}
