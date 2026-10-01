@@ -78,11 +78,11 @@ Should start failing once granted
 
 .. dropdown:: ``.get_member()`` on an Enum input works (guard; must start failing once granted)
 
-   .. literalinclude:: ../../tests/test_what_we_write.py
+   .. literalinclude:: ../../tests/test_enum_should_fail.py
       :language: python
       :start-after: # mwe: enum-should-fail
       :end-before: # end mwe: enum-should-fail
-      :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+      :caption: `tests/test_enum_should_fail.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_enum_should_fail.py>`__
 
 What we want: the member goes in and the member comes out, on every path.
 

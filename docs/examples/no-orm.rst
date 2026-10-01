@@ -70,19 +70,19 @@ Should start failing once granted
 
 .. dropdown:: ``.value`` on an ``int`` field works (guard; must start failing once granted)
 
-   .. literalinclude:: ../../tests/test_what_we_write.py
+   .. literalinclude:: ../../tests/test_int_should_fail.py
       :language: python
       :start-after: # mwe: int-should-fail
       :end-before: # end mwe: int-should-fail
-      :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+      :caption: `tests/test_int_should_fail.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_int_should_fail.py>`__
 
 .. dropdown:: ``.get_dict()`` on a ``dict`` input works (guard; must start failing once granted)
 
-   .. literalinclude:: ../../tests/test_what_we_write.py
+   .. literalinclude:: ../../tests/test_dict_should_fail.py
       :language: python
       :start-after: # mwe: dict-should-fail
       :end-before: # end mwe: dict-should-fail
-      :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+      :caption: `tests/test_dict_should_fail.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_dict_should_fail.py>`__
 
 In the wild
 ~~~~~~~~~~~

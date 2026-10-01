@@ -19,6 +19,11 @@ dependencies = [
     "pytest",
 ]
 
+[project.entry-points."aiida.data"]
+# What a bare Enum member costs today: one serializer entry point per Enum
+# class, keyed on the class's dotted path. aiida-koopmans carries six of these.
+"wishlist.wishlist_types.SpinType" = "aiida.orm.nodes.data.enum:EnumData"
+
 [dependency-groups]
 # The meeting page under docs/: `uv run --group docs sphinx-build -W -b html docs docs/_build/html`
 docs = ["sphinx", "sphinx-design", "furo"]

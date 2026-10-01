@@ -26,25 +26,25 @@ Overarching questions
 1. Enums
 --------
 
-A ``SpinType`` socket on a task is a string socket, so the typed graph does not even build; wrapped by hand, a proxy or a ``str`` comes out. Full set: :doc:`examples/enums`.
+A bare member crosses a socket only with a serializer registered per Enum class; a graph body then sees a proxy and a task body a ``str``. Full set: :doc:`examples/enums`.
 
 1.1 What we would like to write
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. literalinclude:: ../tests/test_what_we_write.py
+.. literalinclude:: ../tests/test_enum_want.py
    :language: python
    :start-after: # mwe: enum-want
    :end-before: # end mwe: enum-want
-   :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+   :caption: `tests/test_enum_want.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_enum_want.py>`__
 
 1.2 What we need to write today
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. literalinclude:: ../tests/test_what_we_write.py
+.. literalinclude:: ../tests/test_enum_today.py
    :language: python
    :start-after: # mwe: enum-today
    :end-before: # end mwe: enum-today
-   :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+   :caption: `tests/test_enum_today.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_enum_today.py>`__
 
 Once granted, ``spin.get_member()`` in a body must raise; the suite pins that.
 
@@ -56,20 +56,20 @@ An ``int`` declared in the signature arrives as ``orm.Int`` inside a deferred gr
 2.1 What we would like to write
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. literalinclude:: ../tests/test_what_we_write.py
+.. literalinclude:: ../tests/test_int_want.py
    :language: python
    :start-after: # mwe: int-want
    :end-before: # end mwe: int-want
-   :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+   :caption: `tests/test_int_want.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_int_want.py>`__
 
 2.2 What we need to write today
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. literalinclude:: ../tests/test_what_we_write.py
+.. literalinclude:: ../tests/test_int_today.py
    :language: python
    :start-after: # mwe: int-today
    :end-before: # end mwe: int-today
-   :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+   :caption: `tests/test_int_today.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_int_today.py>`__
 
 Once granted, ``cfg.nspin.value`` in a body must raise; the suite pins that.
 
@@ -81,20 +81,20 @@ The same body sees a ``dict`` at top level and an ``orm.Dict`` when nested; whic
 3.1 What we would like to write
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. literalinclude:: ../tests/test_what_we_write.py
+.. literalinclude:: ../tests/test_dict_want.py
    :language: python
    :start-after: # mwe: dict-want
    :end-before: # end mwe: dict-want
-   :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+   :caption: `tests/test_dict_want.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_dict_want.py>`__
 
 3.2 What we need to write today
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. literalinclude:: ../tests/test_what_we_write.py
+.. literalinclude:: ../tests/test_dict_today.py
    :language: python
    :start-after: # mwe: dict-today
    :end-before: # end mwe: dict-today
-   :caption: `tests/test_what_we_write.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_what_we_write.py>`__
+   :caption: `tests/test_dict_today.py <https://github.com/elinscott/aiida-workgraph-wishlist/blob/refresh-2026-09/tests/test_dict_today.py>`__
 
 Once granted, ``overrides.get_dict()`` in a body must raise; the suite pins that.
 
